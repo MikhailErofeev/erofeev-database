@@ -2,23 +2,57 @@ package ru.compscicenter.db.erofeev.communication;
 
 import org.apache.http.HttpResponse;
 
-import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class Response {
     private Serializable data;
-    private int code;
-    private Request rq;
+    private Code code;
+    private Map<String, List<String>> params;
 
-    public Response(HttpResponse resp, Request rq) {
-        byte[] bytes = new byte[Integer.valueOf(resp.getFirstHeader("Content-Length").getValue())];
-        code = resp.getStatusLine().getStatusCode();
-        this.rq = rq;
-        try {
-            resp.getEntity().getContent().read(bytes);
-            data = Request.getObject(bytes);
-        } catch (IOException e) {
+    public enum Code {
+        OK(200), NOT_FOUND(404), BAD_REQUEST(400),
+        FORBIDDEN(403), METHOD_NOT_ALLOWED(405),
+        LENGTH_REQUIRED(411), UNDEFINED(-1);
+
+        final int code;
+
+        Code(int i) {
+            this.code = i;
         }
+
+        static Code getCode(int code) {
+            for (Code c : Code.values()) {
+                if (c.code == code) {
+                    return c;
+                }
+            }
+            return UNDEFINED;
+        }
+    }
+
+    public Response(Code code, Serializable data) {
+        this.code = code;
+        this.data = data;
+        params.remove("Content-Length");
+        this.params = new HashMap<>();
+    }
+
+    public void addParam(String key, String value) {
+        if (key.equalsIgnoreCase("Content-Length")) {
+            return;
+        }
+        if (!params.containsKey(key)) {
+            params.put(key, new LinkedList<String>());
+        }
+        params.get(key).add(value);
+    }
+
+    Map<String, List<String>> getParams() {
+        return params;
     }
 
     public static int getResponceCode(HttpResponse hp) {
@@ -33,25 +67,18 @@ public class Response {
         this.data = data;
     }
 
-    public int getCode() {
+    public Code getCode() {
         return code;
     }
 
-    public void setCode(int code) {
+    public void setCode(Code code) {
         this.code = code;
     }
 
-    public Request getRq() {
-        return rq;
-    }
-
-    public void setRq(Request rq) {
-        this.rq = rq;
-    }
 
     @Override
     public String toString() {
-        return "Request " + rq.type + ". Code: " + code + ". Data: " + (data != null ? data : "null");
+        return "Request " + ". Code: " + code + ". Data: " + (data != null ? data : "null");
     }
 
 }

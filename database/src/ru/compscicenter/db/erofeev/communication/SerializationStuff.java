@@ -9,7 +9,7 @@ import java.io.*;
  * Time: 11:06 AM
  */
 public class SerializationStuff {
-    public static byte[] getBytes(Serializable data) throws IOException {
+    public static byte[] getBytes(Serializable data) {
         ObjectOutput out = null;
         byte[] res = null;
         if (data instanceof String) {
@@ -20,9 +20,17 @@ public class SerializationStuff {
             out = new ObjectOutputStream(bos);
             out.writeObject(data);
             res = bos.toByteArray();
+        } catch (IOException e) {
+            return null;
         } finally {
-            out.close();
-            bos.close();
+            try {
+                if (out != null) {
+                    out.close();
+                }
+                bos.close();
+            } catch (IOException e) {
+
+            }
         }
         return res;
     }
