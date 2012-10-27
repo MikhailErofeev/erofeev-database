@@ -26,24 +26,6 @@ public abstract class AbstractHandler implements HttpHandler {
         this.serverName = serverName;
     }
 
-    public static HttpServer createServer(int port, AbstractHandler handler) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 10);
-        HttpContext context = server.createContext("/", handler);
-        return server;
-    }
-
-    public static int findPort(int start) {
-        HttpServer server;
-        while (true) {
-            try {
-                server = HttpServer.create(new InetSocketAddress(start++), 10);
-                break;
-            } catch (IOException e) {
-            }
-        }
-        return start;
-    }
-
 
     private final Request getRequest(HttpExchange exc) throws IOException {
         int length = 0;

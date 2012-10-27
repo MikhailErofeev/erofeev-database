@@ -1,7 +1,4 @@
-package ru.compscicenter.db.erofeev.node.base;
-
-import ru.compscicenter.db.erofeev.communication.Request;
-import ru.compscicenter.db.erofeev.communication.RequestType;
+package ru.compscicenter.db.erofeev.database;
 
 import java.io.*;
 import java.util.Collections;
@@ -40,19 +37,6 @@ public class Base {
     public static Base getInstance() {
         return instance;
     }
-
-    public Entity processRequest(Request r) {
-        if (r.type == RequestType.put) {
-            instance.put(r.data);
-            return null;
-        } else if (r.type == RequestType.delete) {
-            instance.delete(r.ids);
-            return null;
-        } else {
-            return instance.read(r.ids);
-        }
-    }
-
 
     private Base(String baseName) {
 
@@ -197,7 +181,7 @@ public class Base {
     }
 
 
-    public void put(Entity e) {
+    void put(Entity e) {
         if (idToIndex.containsKey(e.getKey())) {
             update(e);
         } else {
@@ -205,28 +189,23 @@ public class Base {
         }
     }
 
-    private boolean create(Entity e) {
+    private void create(Entity e) {
         e.needFlush = true;
         needFlush = true;
         e.lastActive = System.currentTimeMillis();
         store.put(e.getKey(), e);
-        return true;
     }
 
-    private Entity read(Long key) {
+    Entity read(Long key) {
         Entity rslt = store.get(key);
         if (rslt != null) {
             return rslt;
         }
-        try {
-            Integer ind = idToIndex.get(key);
-            if (ind != null) {
-                rslt = readFromFile(ind);
-            } else {
-                return null;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        Integer ind = idToIndex.get(key);
+        if (ind != null) {
+            rslt = readFromFile(ind);
+        } else {
+            return null;
         }
         if (rslt != null) {
             rslt.lastActive = System.currentTimeMillis();
@@ -242,7 +221,7 @@ public class Base {
         store.put(key, e);
     }
 
-    private void delete(Long key) {
+    void delete(Long key) {
 
         if (key == null) {
             return;

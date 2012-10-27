@@ -1,4 +1,4 @@
-package ru.compscicenter.db.erofeev.node.base;
+package ru.compscicenter.db.erofeev.database;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

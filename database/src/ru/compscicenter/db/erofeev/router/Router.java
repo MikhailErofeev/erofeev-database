@@ -27,7 +27,8 @@ public class Router extends AbstractHandler {
             shard.mkdirs();
             System.out.println(shard.getCanonicalFile());
             String command = "java -cp \'out/production/database\' " +
-                    "ru.compscicenter.db.erofeev.balancer.Balancer '" + name + "' '" + shard.getCanonicalFile() + " " + address;
+                    "ru.compscicenter.db.erofeev.balancer.Balancer '"
+                    + name + "' '" + shard.getCanonicalFile() + " " + address;
             ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
             pb.start();
         }
@@ -44,8 +45,7 @@ public class Router extends AbstractHandler {
         String name = "notebook";
         int shards = 2;
         Router router = new Router(name);
-        HttpServer httpServer = createServer(findPort(2300), router);
-        router.address = httpServer.getAddress().getHostString() + ":" + httpServer.getAddress().getPort();
+        HttpServer httpServer = AbstractHandler.createServer(findPort(2300), router);
         router.initShards(name, shards);
         httpServer.start();
     }
