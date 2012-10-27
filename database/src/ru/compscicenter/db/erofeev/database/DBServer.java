@@ -17,18 +17,9 @@ import java.io.IOException;
 public class DBServer extends AbstractHandler {
 
 
-    public DBServer(String serverName) {
-        super(serverName);
-    }
-
-
     public static void main(String[] args) throws IOException {
         String serverName = "database";
-        HttpServer server = createServer(findPort(2300), new DBServer(serverName));
-        Base.init(serverName);
-        server.start();
-        //   System.in.read();
-        server.stop(0);
+
         System.out.println("Server stoped");
     }
 

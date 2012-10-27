@@ -29,7 +29,7 @@ public class Request {
     public Request(RequestType type, Serializable data) {
         this.type = type;
         this.data = data;
-        this.params = new HashMap<>();
+        this.params = new HashMap<String, List<String>>();
     }
 
 

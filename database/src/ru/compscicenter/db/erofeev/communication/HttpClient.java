@@ -21,8 +21,7 @@ import java.util.Map;
  */
 public class HttpClient {
 
-    private static HttpUriRequest prepareRequest(String server, int port, Request request) {
-        String address = "http://" + server + ":" + port;
+    private static HttpUriRequest prepareRequest(String address, Request request) {
         HttpUriRequest httpRequest = null;
         if (request.getType() == Request.RequestType.PUT) {
             HttpPut hp = new HttpPut(address);
@@ -58,9 +57,9 @@ public class HttpClient {
         return response;
     }
 
-    public static Response sendRequest(String server, int port, Request request) throws IOException {
+    public static Response sendRequest(String address, Request request) throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
-        HttpUriRequest httpUriRequest = prepareRequest(server, port, request);
+        HttpUriRequest httpUriRequest = prepareRequest(address, request);
         HttpResponse httpResponse = client.execute(httpUriRequest);
         return generateResponse(httpResponse);
     }

@@ -20,12 +20,16 @@ import java.util.Map;
 //@TODO надо его обозвать получше
 public abstract class AbstractHandler implements HttpHandler {
 
-    private final String serverName;
+    //добавляет имя сервера в хедер, чтобы можно было отследить перемещение запроса
+    private String serverName;
 
-    public AbstractHandler(String serverName) {
-        this.serverName = serverName;
+    public AbstractHandler() {
+        serverName = "undefined";
     }
 
+    public void setServerName(String serverName) {
+        this.serverName = serverName;
+    }
 
     private final Request getRequest(HttpExchange exc) throws IOException {
         int length = 0;

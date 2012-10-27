@@ -2,7 +2,11 @@ package ru.compscicenter.db.erofeev.balancer;
 
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpServer;
+import ru.compscicenter.db.erofeev.Node;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
+import ru.compscicenter.db.erofeev.communication.HttpClient;
+import ru.compscicenter.db.erofeev.communication.Request;
+import ru.compscicenter.db.erofeev.communication.Response;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -16,27 +20,12 @@ import java.util.Arrays;
  */
 public class Balancer extends AbstractHandler {
 
-    int port;
-    String dbname;
-    String path;
-
-    public Balancer(String dbname, String path, String router) throws InterruptedException {
-        super(dbname);
-        this.path = path;
-        HttpServer server = null;
-        int portStart = 2300;
-        this.dbname = dbname;
-        while (true) {
-            try {
-                server = HttpServer.create(new InetSocketAddress(++portStart), 10);
-                break;
-            } catch (IOException e) {
-
-            }
-        }
-        port = portStart;
-        HttpContext context = server.createContext("/", this);
-        server.start();
+    public Balancer(String dbname, int shardIndex, String routerAddress) throws InterruptedException, IOException {
+        Node node = new Node(dbname, "balancer" + shardIndex, this);
+        node.getHttpServer().start();
+        Request request = new Request(Request.RequestType.GET, null);
+        request.addParam("innerMessage", "курение вызывает Хьюстон! " + node.getAddress());
+        HttpClient.sendRequest(routerAddress, request);
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -44,7 +33,12 @@ public class Balancer extends AbstractHandler {
         if (args.length < 3) {
             return;
         } else {
-            new Balancer(args[0], args[1], args[2]);
+            new Balancer(args[0], Integer.valueOf(args[1]), args[2]);
         }
+    }
+
+    @Override
+    public Response performRequest(Request request) {
+        return new Response(Response.Code.OK, "hello world!");
     }
 }

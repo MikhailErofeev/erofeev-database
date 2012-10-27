@@ -38,7 +38,7 @@ public class Response {
         this.code = code;
         this.data = data;
         params.remove("Content-Length");
-        this.params = new HashMap<>();
+        this.params = new HashMap<String, List<String>>();
     }
 
     public void addParam(String key, String value) {

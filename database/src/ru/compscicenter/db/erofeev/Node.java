@@ -12,14 +12,9 @@ import java.net.InetSocketAddress;
  * Date: 10/27/12
  * Time: 1:58 PM
  */
-public abstract class AbstractServer extends AbstractHandler {
 
-    private String serverName;
-    private String DBName;
 
-    public enum ServerRole {
-        ROUTER, BALANCER, CACHE, MASTER, SLAVE;
-    }
+public class Node {
 
     public static int findPort(int start) {
         HttpServer server;
@@ -33,24 +28,39 @@ public abstract class AbstractServer extends AbstractHandler {
         return start;
     }
 
-    public AbstractServer(String DBName) {
-        super(DBName);
-        this.DBName = DBName;
+    private HttpServer httpServer;
+    private String serverName;
+    private String address;
+
+    public Node(String DBName, String role, AbstractHandler ah) throws IOException {
+        httpServer = create();
+        address = httpServer.getAddress().getHostName() + ":" + httpServer.getAddress().getPort();
+        serverName = DBName + "_" + role.toUpperCase() + "_" + address;
+        ah.setServerName(serverName);
+        httpServer.createContext("/", ah);
     }
 
-    private static HttpServer upServer() {
-        int port = findPort(2300);
-        HttpServer server = null;
-        try {
-            server = HttpServer.create(new InetSocketAddress(port), 10);
-        } catch (IOException e) {
-            return null;
-        }
+    public HttpServer getHttpServer() {
+        return httpServer;
+    }
 
+    public void setHttpServer(HttpServer httpServer) {
+        this.httpServer = httpServer;
+    }
+
+    public String getServerName() {
+        return serverName;
+    }
+
+    public void setServerName(String serverName) {
+        this.serverName = serverName;
+    }
+
+    private static HttpServer create() throws IOException {
+        int port = findPort(2300);
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 10);
         return server;
     }
-
-
 
     /**
      * @param args - параметры развёртываемого сервера
@@ -62,11 +72,6 @@ public abstract class AbstractServer extends AbstractHandler {
         if (args.length < 2) {
             return;
         }
-        HttpServer server = upServer();
-        if (server == null){
-            return null;
-        }
-        String address = server.getAddress().getHostString() + ":" + server.getAddress().getPort();
         String DBName = args[0];
         String classes = args[1];
         String parent = null;
@@ -79,5 +84,13 @@ public abstract class AbstractServer extends AbstractHandler {
         послать ОК родителю
          */
 
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 }
