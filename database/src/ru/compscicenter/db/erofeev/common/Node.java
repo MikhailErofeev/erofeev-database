@@ -1,4 +1,4 @@
-package ru.compscicenter.db.erofeev;
+package ru.compscicenter.db.erofeev.common;
 
 import com.sun.net.httpserver.HttpServer;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
@@ -16,16 +16,16 @@ import java.net.InetSocketAddress;
 
 public class Node {
 
-    public static int findPort(int start) {
+    public static HttpServer allocateServer(int portStart) {
         HttpServer server;
         while (true) {
             try {
-                server = HttpServer.create(new InetSocketAddress(start++), 10);
-                break;
+                server = HttpServer.create(new InetSocketAddress(portStart), 10);
+                return server;
             } catch (IOException e) {
             }
+            portStart++;
         }
-        return start;
     }
 
     private HttpServer httpServer;
@@ -34,7 +34,7 @@ public class Node {
 
     public Node(String DBName, String role, AbstractHandler ah) throws IOException {
         httpServer = create();
-        address = httpServer.getAddress().getHostName() + ":" + httpServer.getAddress().getPort();
+        address = "http://localhost" + ":" + httpServer.getAddress().getPort();
         serverName = DBName + "_" + role.toUpperCase() + "_" + address;
         ah.setServerName(serverName);
         httpServer.createContext("/", ah);
@@ -57,8 +57,7 @@ public class Node {
     }
 
     private static HttpServer create() throws IOException {
-        int port = findPort(2300);
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 10);
+        HttpServer server = allocateServer(2300);
         return server;
     }
 

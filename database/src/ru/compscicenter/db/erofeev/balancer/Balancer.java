@@ -1,15 +1,12 @@
 package ru.compscicenter.db.erofeev.balancer;
 
-import com.sun.net.httpserver.HttpContext;
-import com.sun.net.httpserver.HttpServer;
-import ru.compscicenter.db.erofeev.Node;
+import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
 import ru.compscicenter.db.erofeev.communication.HttpClient;
 import ru.compscicenter.db.erofeev.communication.Request;
 import ru.compscicenter.db.erofeev.communication.Response;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 /**
@@ -24,7 +21,7 @@ public class Balancer extends AbstractHandler {
         Node node = new Node(dbname, "balancer" + shardIndex, this);
         node.getHttpServer().start();
         Request request = new Request(Request.RequestType.GET, null);
-        request.addParam("innerMessage", "курение вызывает Хьюстон! " + node.getAddress());
+        request.addParam("Innermessage", node.getAddress());
         HttpClient.sendRequest(routerAddress, request);
     }
 

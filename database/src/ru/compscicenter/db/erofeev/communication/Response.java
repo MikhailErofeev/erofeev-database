@@ -37,7 +37,6 @@ public class Response {
     public Response(Code code, Serializable data) {
         this.code = code;
         this.data = data;
-        params.remove("Content-Length");
         this.params = new HashMap<String, List<String>>();
     }
 
@@ -78,7 +77,7 @@ public class Response {
 
     @Override
     public String toString() {
-        return "Request " + ". Code: " + code + ". Data: " + (data != null ? data : "null");
+        return "Response code: " + code + ". Data: " + (data != null ? data : "null");
     }
 
 }

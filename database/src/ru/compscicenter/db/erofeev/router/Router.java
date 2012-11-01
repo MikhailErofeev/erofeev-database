@@ -1,9 +1,8 @@
 package ru.compscicenter.db.erofeev.router;
 
-import com.sun.net.httpserver.HttpServer;
-import ru.compscicenter.db.erofeev.Launcher;
-import ru.compscicenter.db.erofeev.Node;
 import ru.compscicenter.db.erofeev.balancer.Balancer;
+import ru.compscicenter.db.erofeev.common.Launcher;
+import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
 import ru.compscicenter.db.erofeev.communication.Request;
 import ru.compscicenter.db.erofeev.communication.Response;
@@ -18,7 +17,7 @@ import java.io.IOException;
  * Time: 4:26 PM
  */
 public class Router extends AbstractHandler {
-    void initShards(String name, int shards) throws IOException, InterruptedException {
+    void initShards(String name, int shards, String address) throws IOException, InterruptedException {
         File root = new File(".");
         File shardsFolder = new File("./" + name);
         if (shardsFolder.exists()) {
@@ -27,6 +26,10 @@ public class Router extends AbstractHandler {
         for (int i = 0; i < shards; i++) {
             File shard = new File("./" + name + "/shards/shard" + i);
             shard.mkdirs();
+        }
+        for (int i = 0; i < shards; i++) {
+            Launcher.startServer(Balancer.class, new String[]{name, String.valueOf(i), address});
+            //Thread.sleep(1000);
         }
     }
 
@@ -38,19 +41,17 @@ public class Router extends AbstractHandler {
         int shards = 2;
         Router router = new Router();
         Node server = new Node(name, "router", router);
-        System.out.println("Start router at " + server.getAddress());
         server.getHttpServer().start();
-        router.initShards(name, shards);
-        for (int i = 0; i < shards; i++) {
-            Launcher.startServer(Balancer.class, new String[]{name, String.valueOf(i), server.getAddress()});
-        }
+        router.initShards(name, shards, server.getAddress());
+
+        System.in.read();
     }
 
 
     @Override
     public Response performRequest(Request request) {
-        if (request.getParams().containsKey("innerMessage")) {
-            String message = request.getParams().get("innerMessage").get(0);
+        if (request.getParams().containsKey("Innermessage")) {
+            String message = request.getParams().get("Innermessage").get(0);
             System.out.println(message);
             return new Response(Response.Code.OK, null);
         } else {

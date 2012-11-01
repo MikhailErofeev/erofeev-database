@@ -36,6 +36,9 @@ public class SerializationStuff {
     }
 
     public static Serializable getObject(byte[] data) {
+        if (data == null){
+            return null;
+        }
         ObjectInputStream readS = null;
         Serializable c = null;
         try {

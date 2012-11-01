@@ -1,12 +1,9 @@
 package ru.compscicenter.db.erofeev.communication;
 
-import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
@@ -33,9 +30,14 @@ public abstract class AbstractHandler implements HttpHandler {
 
     private final Request getRequest(HttpExchange exc) throws IOException {
         int length = 0;
-        length = Integer.parseInt(exc.getRequestHeaders().remove("Content-length").get(0));
-        byte[] result = new byte[length];
-        exc.getRequestBody().read(result);
+        if (exc.getRequestHeaders().get("Content-length") != null){
+            length = Integer.parseInt(exc.getRequestHeaders().get("Content-length").get(0));
+        }
+        byte[] result = null;
+        if (length > 0) {
+            result = new byte[length];
+            exc.getRequestBody().read(result);
+        }
         Request.RequestType type = Request.RequestType.getType(exc.getRequestMethod());
         Request r = new Request(type, SerializationStuff.getObject(result), exc.getRequestHeaders());
         return r;
@@ -44,11 +46,17 @@ public abstract class AbstractHandler implements HttpHandler {
 
     @Override
     public final void handle(HttpExchange exc) throws IOException {
+        System.out.println("new request");
         try {
             Request request = getRequest(exc);
+            System.out.println(request.toString());
             Response response = performRequest(request);
             response.addParam("node", serverName);
+            System.out.println(response.toString());
             sendResponse(exc, response);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
         } finally {
             exc.getResponseBody().flush();
             exc.getResponseBody().close();

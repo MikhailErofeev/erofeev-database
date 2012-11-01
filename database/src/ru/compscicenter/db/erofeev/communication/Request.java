@@ -33,10 +33,23 @@ public class Request {
     }
 
 
-    public Request(RequestType type, Serializable data, Map params) {
+    public Request(RequestType type, Serializable data, Map<String, List<String>> params) {
         this.type = type;
         this.data = data;
-        this.params = params;
+        this.params = new HashMap<String, List<String>>();
+
+        for (Map.Entry<String, List<String>> entry : params.entrySet()) {
+            this.params.put(entry.getKey(), entry.getValue());
+        }
+        this.params.remove("Content-Length");
+        this.params.remove("Accept-language");
+        this.params.remove("Content-type");
+        this.params.remove("Accept-encoding");
+        this.params.remove("Accept-charset");
+        this.params.remove("User-agent");
+        this.params.remove("Accept");
+        this.params.remove("Connection");
+        this.params.remove("Host");
     }
 
     public void addParam(String key, String value) {
