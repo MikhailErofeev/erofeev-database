@@ -57,10 +57,17 @@ public class HttpClient {
         return response;
     }
 
-    public static Response sendRequest(String address, Request request) throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
-        HttpUriRequest httpUriRequest = prepareRequest(address, request);
-        HttpResponse httpResponse = client.execute(httpUriRequest);
-        return generateResponse(httpResponse);
+    public static Response sendRequest(String address, Request request) {
+        try {
+            DefaultHttpClient client = new DefaultHttpClient();
+            HttpUriRequest httpUriRequest = prepareRequest(address, request);
+            System.out.println("request send to " + address);
+            HttpResponse httpResponse = client.execute(httpUriRequest);
+            System.out.println("ok");
+            return generateResponse(httpResponse);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

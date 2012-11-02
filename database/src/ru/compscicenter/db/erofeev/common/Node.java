@@ -2,9 +2,16 @@ package ru.compscicenter.db.erofeev.common;
 
 import com.sun.net.httpserver.HttpServer;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
+import ru.compscicenter.db.erofeev.communication.HttpClient;
+import ru.compscicenter.db.erofeev.communication.Request;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -31,12 +38,23 @@ public class Node {
     private HttpServer httpServer;
     private String serverName;
     private String address;
+    private AbstractHandler handler;
+    private String parentAddress;
+    private String role;
 
-    public Node(String DBName, String role, AbstractHandler ah) throws IOException {
+    public Node(String DBName, String role, AbstractHandler ah, String parentAddress) throws IOException {
+        this.parentAddress = parentAddress;
+        handler = ah;
         httpServer = create();
+        //@FIXME получить нормальный адрес из httpServer неполучилось
         address = "http://localhost" + ":" + httpServer.getAddress().getPort();
-        serverName = DBName + "_" + role.toUpperCase() + "_" + address;
+        serverName = DBName + "_" + role + "_" + address;
+        this.role = role;
         ah.setServerName(serverName);
+        Handler handler = new FileHandler("logs/"+DBName + "_" + role + ".log");
+        Logger.getLogger("").setLevel(Level.INFO);
+        Logger.getLogger("").addHandler(handler);
+        Logger.getLogger("").info("set logger for " + serverName);
         httpServer.createContext("/", ah);
     }
 
@@ -44,52 +62,46 @@ public class Node {
         return httpServer;
     }
 
-    public void setHttpServer(HttpServer httpServer) {
-        this.httpServer = httpServer;
-    }
-
     public String getServerName() {
         return serverName;
     }
 
-    public void setServerName(String serverName) {
-        this.serverName = serverName;
+    boolean isReady;
+
+    //огромная конструкция на случай ошибки при инициализации Node
+    private static synchronized void sendActivateResult(boolean result, Serializable message,
+                                                        boolean isReady, String role, String parentAddress) {
+        Request request = new Request(Request.RequestType.PUT, message);
+        request.addParam("Innermessage", result ? "activate_ok" : "activate_fail");
+        request.addParam("Server", role);
+        Logger.getLogger("").info("send request " + request);
+        System.out.println(HttpClient.sendRequest(parentAddress, request));
     }
+
+    public static void sendActivateResult(boolean result, Serializable message, String role, String parentAddress) {
+        sendActivateResult(result, message, false, role, parentAddress);
+    }
+
+    public void sendActivateResult(boolean result, Serializable message) {
+        if (isReady) {
+            return;
+        }
+        isReady = true;
+        sendActivateResult(result, message, isReady, role, parentAddress);
+    }
+
+    public synchronized void sendTrueActiveateResult() {
+        sendActivateResult(true, this.getAddress());
+    }
+
 
     private static HttpServer create() throws IOException {
         HttpServer server = allocateServer(2300);
         return server;
     }
 
-    /**
-     * @param args - параметры развёртываемого сервера
-     *             args[0] - имя базы данных
-     *             args[1] - папка с классами, которые нужно запускать
-     *             args[2] - адресс сервера-родителя
-     */
-    public final static void main(String[] args) {
-        if (args.length < 2) {
-            return;
-        }
-        String DBName = args[0];
-        String classes = args[1];
-        String parent = null;
-        if (args.length > 2) {
-            parent = args[3];
-        }
-        /*
-        нужно поднять себя
-        вызвать последующие сервера
-        послать ОК родителю
-         */
-
-    }
-
     public String getAddress() {
         return address;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
 }

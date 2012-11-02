@@ -14,7 +14,6 @@ import java.util.Map;
  * Time: 10:05 AM
  */
 
-//@TODO надо его обозвать получше
 public abstract class AbstractHandler implements HttpHandler {
 
     //добавляет имя сервера в хедер, чтобы можно было отследить перемещение запроса

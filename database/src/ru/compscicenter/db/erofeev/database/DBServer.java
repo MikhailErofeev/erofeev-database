@@ -7,59 +7,93 @@ package ru.compscicenter.db.erofeev.database;
  * Time: 19:51
  */
 
-import com.sun.net.httpserver.HttpServer;
+import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
 import ru.compscicenter.db.erofeev.communication.Request;
 import ru.compscicenter.db.erofeev.communication.Response;
+import ru.compscicenter.db.erofeev.communication.SerializationStuff;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class DBServer extends AbstractHandler {
+public class DBServer {
+    Node node;
+
+    private boolean master;
+
+    public DBServer(String dbname, int shardIndex, int serverIndex, String slaverAddress, String shardAddress) {
+        master = serverIndex == 0;
+        String parentAddress = master?shardAddress:slaverAddress;
+        try {
+            String indexes = shardIndex + "_" + serverIndex;
+            node = new Node(dbname,
+                    master ? "Master_" + indexes : "Slave_" + indexes, new DBHanlder(), parentAddress);
+            Logger.getLogger("").info("master = " + master + ". parent = " + parentAddress);
+            node.getHttpServer().start();
+        } catch (IOException e) {
+            e.printStackTrace();
+            String ex = SerializationStuff.getStringFromException(e);
+            Logger.getLogger("").warning(ex);
+            Node.sendActivateResult(false, ex, this.getClass().getSimpleName(), parentAddress);
+            return;
+        }
+        node.sendTrueActiveateResult();
+        Logger.getLogger("").info("true result sended");
+
+    }
 
 
     public static void main(String[] args) throws IOException {
-        String serverName = "database";
-
-        System.out.println("Server stoped");
+        new DBServer(args[0], Integer.valueOf(args[1]),
+                Integer.valueOf(args[2]), args[3], args[4]);
     }
 
-    private long getID(Request request) {
-        return Long.valueOf(request.getParams().get("id").get(0));
-    }
+    class DBHanlder extends AbstractHandler {
+        private long getID(Request request) {
+            return Long.valueOf(request.getParams().get("id").get(0));
+        }
 
-    public Response callDB(Request.RequestType type, long id, Entity data) {
-        Base instance = Base.getInstance();
+        private Response callDB(Request.RequestType type, long id, Entity data) {
+            Base instance = Base.getInstance();
 
-        if (type == Request.RequestType.PUT) {
-            instance.put(data);
-        } else if (type == Request.RequestType.DELETE) {
-            instance.delete(id);
-        } else {
-            Entity res = instance.read(id);
-            if (res == null) {
-                return new Response(Response.Code.NOT_FOUND, null);
+            if (type == Request.RequestType.PUT) {
+                instance.put(data);
+            } else if (type == Request.RequestType.DELETE) {
+                instance.delete(id);
             } else {
-                return new Response(Response.Code.OK, res);
+                Entity res = instance.read(id);
+                if (res == null) {
+                    return new Response(Response.Code.NOT_FOUND, null);
+                } else {
+                    return new Response(Response.Code.OK, res);
+                }
             }
+            return new Response(Response.Code.OK, null);
         }
-        return new Response(Response.Code.OK, null);
+
+        @Override
+        public Response performRequest(Request request) {
+            if (request.getParams().containsKey("Innermessage")) {
+                return new Response(Response.Code.OK, null);
+            } else if (request.getParams().containsKey("node")) {
+                long id = -1;
+                try {
+                    id = getID(request);
+                } catch (Exception e) {
+                    return new Response(Response.Code.BAD_REQUEST, null);
+                }
+                Entity e = null;
+                if (request.getData() != null) {
+                    e = new Entity(id, request.getData());
+                }
+                return callDB(request.getType(), id, e);
+            } else {
+                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + DBServer.this.node.getServerName() + ". доступ только для своих");
+            }
+
+        }
+
     }
-
-    @Override
-    public Response performRequest(Request request) {
-        long id = -1;
-        try {
-            id = getID(request);
-        } catch (Exception e) {
-            return new Response(Response.Code.BAD_REQUEST, null);
-        }
-        Entity e = null;
-        if (request.getData() != null) {
-            e = new Entity(id, request.getData());
-        }
-        return callDB(request.getType(), id, e);
-
-    }
-
 
 }

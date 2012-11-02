@@ -1,7 +1,5 @@
 package ru.compscicenter.db.erofeev.common;
 
-import ru.compscicenter.db.erofeev.balancer.Balancer;
-
 import java.io.IOException;
 
 /**
@@ -14,8 +12,7 @@ public class Launcher {
 
     private static final String PATH = "out/production/database";
 
-    public static void startServer(Class className, String[] params) throws IOException {
-
+    public static void startServer(Class className, String[] params) throws IOException{
         StringBuilder command = new StringBuilder();
         command.append("java -cp " + PATH + ":"+
                 "lib/httpcomponents-client-4.2.1/lib/httpclient-4.2.1.jar:" +

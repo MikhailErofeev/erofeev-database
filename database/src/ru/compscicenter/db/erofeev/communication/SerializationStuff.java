@@ -35,6 +35,14 @@ public class SerializationStuff {
         return res;
     }
 
+    public static String getStringFromException(Exception e){
+        StringBuilder exception = new StringBuilder();
+        for (StackTraceElement ste : e.getStackTrace()) {
+            exception.append(ste.toString() + "\n");
+        }
+        return exception.toString();
+    }
+
     public static Serializable getObject(byte[] data) {
         if (data == null){
             return null;
