@@ -41,6 +41,23 @@ public class HttpClient {
         return httpRequest;
     }
 
+    public abstract static class AsyncHttpClient implements Runnable {
+        private String addr;
+        private Request request;
+
+        protected AsyncHttpClient(String addr, Request request) {
+            this.addr = addr;
+            this.request = request;
+        }
+
+        public abstract void performResponce(Response response);
+
+        @Override
+        public void run() {
+            performResponce(HttpClient.sendRequest(addr, request));
+        }
+    }
+
     private static Response generateResponse(HttpResponse httpResponse) throws IOException {
         int length = Integer.valueOf(httpResponse.getFirstHeader("Content-Length").getValue());
         Serializable data = null;

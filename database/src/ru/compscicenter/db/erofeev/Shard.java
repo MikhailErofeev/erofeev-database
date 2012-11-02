@@ -2,17 +2,10 @@ package ru.compscicenter.db.erofeev;
 
 import ru.compscicenter.db.erofeev.common.Launcher;
 import ru.compscicenter.db.erofeev.common.Node;
-import ru.compscicenter.db.erofeev.communication.AbstractHandler;
-import ru.compscicenter.db.erofeev.communication.Request;
-import ru.compscicenter.db.erofeev.communication.Response;
-import ru.compscicenter.db.erofeev.communication.SerializationStuff;
+import ru.compscicenter.db.erofeev.communication.*;
 import ru.compscicenter.db.erofeev.database.DBServer;
 
 import java.io.IOException;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -101,9 +94,17 @@ public class Shard {
         public Response performRequest(Request request) {
             if (request.getParams().containsKey("Innermessage")) {
                 innerMessagesPerform(request);
-                return new Response(Response.Code.OK, "ok ok");
+                return new Response(Response.Code.OK, null);
+            } else if (!request.getParams().containsKey("In")) {
+                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
+            } else if (request.getParams().containsKey("Id")) {
+                if (request.getType() == Request.RequestType.GET) {
+                    return HttpClient.sendRequest(slaverAddress, request);
+                } else {
+                    return HttpClient.sendRequest(masterAddress, request);
+                }
             } else {
-                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + Shard.this.node.getServerName() + ". доступ только для своих");
+                return new Response(Response.Code.FORBIDDEN, "Это " + node.getServerName() + ". запрос непоятен. роутер, ты чего творишь?");
             }
         }
     }

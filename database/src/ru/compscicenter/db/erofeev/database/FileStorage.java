@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Base {
+public class FileStorage  {
 
     /*
      * @FIXME Поток автоматической записи и подчистки кэша. глючит, на потом.
@@ -21,26 +21,27 @@ public class Base {
     private String baseName;
     private boolean needFlush;
     private int lastBaseSize;
-    private static final int CACHE_SIZE = 1000;
+    private static final int CACHE_SIZE = 100;
+    //такой кэш спасёт от перезаписи часто изменяемых объектов, но не потребует много оперативной памяти
 
-    private static Base instance;
+    private static FileStorage instance;
 
     public static boolean init(String name) {
         if (instance == null) {
-            instance = new Base(name);
+            instance = new FileStorage(name);
             return true;
         } else {
             return false;
         }
     }
 
-    public static Base getInstance() {
+    public static FileStorage getInstance() {
         return instance;
     }
 
-    private Base(String baseName) {
+    private FileStorage(String baseName) {
 
-        store = Collections.synchronizedMap(new LruCache<Long, Entity>(CACHE_SIZE));
+        store = Collections.synchronizedMap(new LruCache(CACHE_SIZE));
         idToIndex = new ConcurrentHashMap<Long, Integer>();
         this.baseName = baseName;
         lastBaseSize = 0;
@@ -49,7 +50,7 @@ public class Base {
             try {
                 file.createNewFile();
             } catch (IOException ex) {
-                Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         //ExecutorService exec = Executors.newCachedThreadPool();
@@ -70,7 +71,7 @@ public class Base {
                     idToIndex.put(new Long(res[0]), new Integer(res[1]));
                 }
             } catch (Exception ex) {
-                Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
             }
             lastBaseSize = idToIndex.size();
         }
@@ -87,7 +88,7 @@ public class Base {
             }
             bw.close();
         } catch (Exception ex) {
-            Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -134,7 +135,7 @@ public class Base {
             }
             ok = true;
         } catch (Exception ex) {
-            Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 if (writeS != null) {
@@ -154,7 +155,7 @@ public class Base {
                     lastBaseSize = inserted;
                 }
             } catch (Exception ex) {
-                Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
@@ -169,19 +170,19 @@ public class Base {
             }
             rslt = (Entity) ois.readObject();
         } catch (Exception ex) {
-            Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 ois.close();
             } catch (IOException ex) {
-                Logger.getLogger(Base.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
             }
             return rslt;
         }
     }
 
 
-    void put(Entity e) {
+    public void put(Entity e) {
         if (idToIndex.containsKey(e.getKey())) {
             update(e);
         } else {
@@ -196,7 +197,7 @@ public class Base {
         store.put(e.getKey(), e);
     }
 
-    Entity read(Long key) {
+    public Entity get(Long key) {
         Entity rslt = store.get(key);
         if (rslt != null) {
             return rslt;
@@ -221,7 +222,7 @@ public class Base {
         store.put(key, e);
     }
 
-    void delete(Long key) {
+    public void delete(Long key) {
 
         if (key == null) {
             return;

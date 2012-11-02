@@ -74,8 +74,6 @@ public class Node {
         Request request = new Request(Request.RequestType.PUT, message);
         request.addParam("Innermessage", result ? "activate_ok" : "activate_fail");
         request.addParam("Server", role);
-        Logger.getLogger("").info("send request " + request);
-        System.out.println(HttpClient.sendRequest(parentAddress, request));
     }
 
     public static void sendActivateResult(boolean result, Serializable message, String role, String parentAddress) {

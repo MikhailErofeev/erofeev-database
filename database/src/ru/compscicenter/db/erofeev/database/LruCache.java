@@ -9,16 +9,21 @@ import java.util.Map;
  * Date: 19.10.12
  * Time: 19:28
  */
-public class LruCache<A, B> extends LinkedHashMap<A, B> {
+public class LruCache extends LinkedHashMap<Long, Entity> {
     private final int maxEntries;
 
     public LruCache(final int maxEntries) {
         super(maxEntries + 1, 1.0f, true);
         this.maxEntries = maxEntries;
     }
+
     @Override
-    protected boolean removeEldestEntry(final Map.Entry<A, B> eldest) {
-        return super.size() > maxEntries;
+    protected boolean removeEldestEntry(final Map.Entry<Long, Entity> eldest) {
+        if (eldest.getValue().needFlush) {
+            return false;
+        } else {
+            return super.size() > maxEntries;
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +30,7 @@ public abstract class AbstractHandler implements HttpHandler {
 
     private final Request getRequest(HttpExchange exc) throws IOException {
         int length = 0;
-        if (exc.getRequestHeaders().get("Content-length") != null){
+        if (exc.getRequestHeaders().get("Content-length") != null) {
             length = Integer.parseInt(exc.getRequestHeaders().get("Content-length").get(0));
         }
         byte[] result = null;
@@ -42,16 +43,21 @@ public abstract class AbstractHandler implements HttpHandler {
         return r;
     }
 
+    protected List<Long> LongsFromStrings(List<String> strings) {
+        List<Long> longs = new LinkedList<>();
+        for (String s : strings) {
+            longs.add(Long.valueOf(s));
+        }
+        return longs;
+    }
+
 
     @Override
     public final void handle(HttpExchange exc) throws IOException {
-        System.out.println("new request");
         try {
             Request request = getRequest(exc);
-            System.out.println(request.toString());
             Response response = performRequest(request);
-            response.addParam("node", serverName);
-            System.out.println(response.toString());
+            response.addParam("node", serverName); //помечаем своё присутствие в обработке запроса
             sendResponse(exc, response);
         } catch (IOException e) {
             e.printStackTrace();
@@ -82,5 +88,5 @@ public abstract class AbstractHandler implements HttpHandler {
 
     }
 
-    public abstract Response performRequest(Request request);
+    protected abstract Response performRequest(Request request);
 }

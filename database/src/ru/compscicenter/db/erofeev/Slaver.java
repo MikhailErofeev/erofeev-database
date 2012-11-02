@@ -2,16 +2,15 @@ package ru.compscicenter.db.erofeev;
 
 import ru.compscicenter.db.erofeev.common.Launcher;
 import ru.compscicenter.db.erofeev.common.Node;
-import ru.compscicenter.db.erofeev.communication.AbstractHandler;
-import ru.compscicenter.db.erofeev.communication.Request;
-import ru.compscicenter.db.erofeev.communication.Response;
-import ru.compscicenter.db.erofeev.communication.SerializationStuff;
+import ru.compscicenter.db.erofeev.communication.*;
 import ru.compscicenter.db.erofeev.database.DBServer;
+import ru.compscicenter.db.erofeev.database.Entity;
+import ru.compscicenter.db.erofeev.database.LruCache;
 
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,6 +31,9 @@ public class Slaver {
     private List<Slave> slaveList; //пишем во все сразу
     private String dbname;
     private final int shardIndex;
+    private Map<Long, Entity> cache;
+    private final int CACHE_SIZE = 10000;
+    private ExecutorService exec = Executors.newCachedThreadPool();
 
 
     private void initSlave(int serverIndex) throws IOException {
@@ -45,6 +47,7 @@ public class Slaver {
         slavesN = slaves;
         this.slaveQueue = new LinkedBlockingQueue<Slave>();
         this.slaveList = new LinkedList<Slave>();
+        cache = Collections.synchronizedMap(new LruCache(CACHE_SIZE));
         node = null;
         try {
             node = new Node(name, this.getClass().getSimpleName() + shardIndex, new SlaverHandler(), shardAddress);
@@ -77,6 +80,7 @@ public class Slaver {
         }
     }
 
+
     class SlaverHandler extends AbstractHandler {
 
         void innerMessagesPerform(Request request) {
@@ -101,18 +105,86 @@ public class Slaver {
                         Slaver.this.node.sendTrueActiveateResult();
                     }
                 }
-
             } else if ("activate_fail".equals(message)) {
                 Slaver.this.node.sendActivateResult(false, request.getData());
             }
         }
 
+        private synchronized Slave getNextSlave() {
+            Slave s = Slaver.this.slaveQueue.remove();
+            Slaver.this.slaveQueue.add(s);
+            return s;
+        }
+
+        private Response readFromSlave(Request request) {
+            Slave s = getNextSlave();
+            return HttpClient.sendRequest(s.addr, request);
+        }
+
+        private Response getter(Request request) {
+            long id = LongsFromStrings(request.getParams().get("Id")).get(0);
+            Entity e = Slaver.this.cache.get(id);
+            Response response = null;
+            if (e == null) {
+                response = readFromSlave(request);
+                if (response.getCode() == Response.Code.OK) {
+                    e = new Entity(id, response.getData());
+                    Slaver.this.cache.put(id, e);
+                }
+                return response;
+            } else {
+                return new Response(Response.Code.OK, e.getData());
+            }
+        }
+
+        private void asyncRequestToSlaves(Request request) {
+            for (Slave s : slaveList) {
+                exec.execute(new RequestExecutor(s.addr, request));
+            }
+        }
+
+        private Response putter(Request request) {
+            long id = LongsFromStrings(request.getParams().get("Id")).get(0);
+            cache.put(id, new Entity(id, request.getData()));
+            asyncRequestToSlaves(request);
+            return new Response(Response.Code.OK, null);
+        }
+
+        private Response deleter(Request request) {
+            long id = LongsFromStrings(request.getParams().get("Id")).get(0);
+            cache.remove(id);
+            asyncRequestToSlaves(request);
+            return new Response(Response.Code.OK, null);
+        }
+
+        private class RequestExecutor extends HttpClient.AsyncHttpClient {
+
+            private RequestExecutor(String addr, Request request) {
+                super(addr, request);
+            }
+
+            @Override
+            public void performResponce(Response response) {
+                //@TODO что если что-то пошло не так?
+            }
+        }
+
         @Override
         public Response performRequest(Request request) {
-            if (request.getParams().containsKey("Innermessage")) {
+            if (!request.getParams().containsKey("In")) {
+                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
+            } else if (request.getParams().containsKey("Innermessage")) {
                 return new Response(Response.Code.OK, null);
+            } else if (request.getParams().containsKey("Id")) {
+                if (request.getType() == Request.RequestType.GET) {
+                    return getter(request);
+                } else if (request.getType() == Request.RequestType.PUT) {
+                    return putter(request);
+                } else {
+                    return deleter(request);
+                }
             } else {
-                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + Slaver.this.node.getServerName() + ". доступ только для своих");
+                return new Response(Response.Code.FORBIDDEN, "Это " + node.getServerName() + ". запрос непоятен. роутер, ты чего творишь?");
             }
         }
     }

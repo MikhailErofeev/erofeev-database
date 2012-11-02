@@ -8,23 +8,21 @@ package ru.compscicenter.db.erofeev.database;
  */
 
 import ru.compscicenter.db.erofeev.common.Node;
-import ru.compscicenter.db.erofeev.communication.AbstractHandler;
-import ru.compscicenter.db.erofeev.communication.Request;
-import ru.compscicenter.db.erofeev.communication.Response;
-import ru.compscicenter.db.erofeev.communication.SerializationStuff;
+import ru.compscicenter.db.erofeev.communication.*;
 
 import java.io.IOException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DBServer {
     Node node;
 
     private boolean master;
+    private String slaverAddress;
 
     public DBServer(String dbname, int shardIndex, int serverIndex, String slaverAddress, String shardAddress) {
         master = serverIndex == 0;
-        String parentAddress = master?shardAddress:slaverAddress;
+        String parentAddress = master ? shardAddress : slaverAddress;
+        this.slaverAddress = slaverAddress;
         try {
             String indexes = shardIndex + "_" + serverIndex;
             node = new Node(dbname,
@@ -54,15 +52,31 @@ public class DBServer {
             return Long.valueOf(request.getParams().get("id").get(0));
         }
 
-        private Response callDB(Request.RequestType type, long id, Entity data) {
-            Base instance = Base.getInstance();
-
+        private Response callDB(Request request) {
+            FileStorage instance = FileStorage.getInstance();
+            long id = -1;
+            try {
+                id = getID(request);
+            } catch (Exception e) {
+                return new Response(Response.Code.BAD_REQUEST, null);
+            }
+            Request.RequestType type = request.getType();
+            Entity e = null;
+            if (request.getData() != null) {
+                e = new Entity(id, request.getData());
+            }
             if (type == Request.RequestType.PUT) {
-                instance.put(data);
+                instance.put(e);
+                if (master) {
+                    HttpClient.sendRequest(slaverAddress, request);
+                }
             } else if (type == Request.RequestType.DELETE) {
                 instance.delete(id);
+                if (master) {
+                    HttpClient.sendRequest(slaverAddress, request);
+                }
             } else {
-                Entity res = instance.read(id);
+                Entity res = instance.get(id);
                 if (res == null) {
                     return new Response(Response.Code.NOT_FOUND, null);
                 } else {
@@ -76,20 +90,12 @@ public class DBServer {
         public Response performRequest(Request request) {
             if (request.getParams().containsKey("Innermessage")) {
                 return new Response(Response.Code.OK, null);
-            } else if (request.getParams().containsKey("node")) {
-                long id = -1;
-                try {
-                    id = getID(request);
-                } catch (Exception e) {
-                    return new Response(Response.Code.BAD_REQUEST, null);
-                }
-                Entity e = null;
-                if (request.getData() != null) {
-                    e = new Entity(id, request.getData());
-                }
-                return callDB(request.getType(), id, e);
+            } else if (!request.getParams().containsKey("In")) {
+                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
+            } else if (request.getParams().containsKey("Id")) {
+                return callDB(request);
             } else {
-                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + DBServer.this.node.getServerName() + ". доступ только для своих");
+                return new Response(Response.Code.FORBIDDEN, "Это " + node.getServerName() + ". запрос непоятен. роутер, ты чего творишь?");
             }
 
         }

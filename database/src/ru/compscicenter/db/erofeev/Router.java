@@ -3,6 +3,7 @@ package ru.compscicenter.db.erofeev;
 import ru.compscicenter.db.erofeev.common.Launcher;
 import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.AbstractHandler;
+import ru.compscicenter.db.erofeev.communication.HttpClient;
 import ru.compscicenter.db.erofeev.communication.Request;
 import ru.compscicenter.db.erofeev.communication.Response;
 
@@ -52,15 +53,25 @@ public class Router {
     class RouterHandler extends AbstractHandler {
         @Override
         public Response performRequest(Request request) {
+            request.addParam("In", "ok"); //пометка, что запрос пришёл от главного сервера
             if (request.getParams().containsKey("Innermessage")) {
                 String message = request.getParams().get("Innermessage").get(0);
-                System.out.println(message);
-                System.out.println(request.getData());
                 shards.add(message);
                 return new Response(Response.Code.OK, null);
+            } else if (request.getParams().containsKey("Id")) {
+                List<String> ids = request.getParams().get("Id");
+                if (ids.size() > 1) {
+                    return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + Router.this.node.getServerName() + ". добавление пачками пока не работает");
+                } else {
+                    long id = Long.valueOf(ids.get(0));
+                    String addr = shards.get((int) (id % shards.size()));
+                    return HttpClient.sendRequest(addr,request);
+                }
+
             } else {
-                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + Router.this.node.getServerName() + ". доступ только для своих");
+                return new Response(Response.Code.FORBIDDEN, "Это " + Router.this.node.getServerName() + ". запрос непоятен. попробуйте добавить Id в header");
             }
         }
+
     }
 }
