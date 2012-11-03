@@ -11,6 +11,7 @@ import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.*;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.logging.Logger;
 
 public class DBServer {
@@ -38,7 +39,6 @@ public class DBServer {
             return;
         }
         node.sendTrueActiveateResult();
-        Logger.getLogger("").info("true result sended");
 
     }
 
@@ -75,16 +75,34 @@ public class DBServer {
                     return HttpClient.sendRequest(slaverAddress, request);
                 }
             } else if (type == Request.RequestType.DELETE) {
-                instance.delete(id);
-                if (master) {
-                    return HttpClient.sendRequest(slaverAddress, request);
+                if (request.getParams().containsKey("Aliquant")) {
+                    int total = Integer.valueOf(request.getParams().get("Aliquant_total").get(0));
+                    int i = Integer.valueOf(request.getParams().get("Aliquant_index").get(0));
+                    instance.removeAliquants(i, total);
+                    if (master) {
+                        return HttpClient.sendRequest(slaverAddress, request);
+                    }
+                } else {
+                    instance.delete(id);
+                    if (master) {
+                        return HttpClient.sendRequest(slaverAddress, request);
+                    }
                 }
             } else {
-                Entity res = instance.get(id);
-                if (res == null) {
-                    return new Response(Response.Code.NOT_FOUND, null);
-                } else {
+                if (request.getParams().containsKey("Aliquant")) {
+                    Logger.getLogger("").info("start Aliquant");
+                    int total = Integer.valueOf(request.getParams().get("Aliquant_total").get(0));
+                    int i = Integer.valueOf(request.getParams().get("Aliquant_index").get(0));
+                    LinkedList<Entity> res = instance.getAlliquants(i, total);
+                    Logger.getLogger("").info(res.toString());
                     return new Response(Response.Code.OK, res);
+                } else {
+                    Entity res = instance.get(id);
+                    if (res == null) {
+                        return new Response(Response.Code.NOT_FOUND, null);
+                    } else {
+                        return new Response(Response.Code.OK, res.getData());
+                    }
                 }
             }
             return new Response(Response.Code.OK, null);

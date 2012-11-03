@@ -20,7 +20,7 @@ public final class Entity implements Serializable {
 
     @Override
     public String toString() {
-        return this.data.toString();
+        return "{key: "+key+ ";data: " + data.toString() + "}";
     }
 
 

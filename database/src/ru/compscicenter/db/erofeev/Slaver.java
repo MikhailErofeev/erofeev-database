@@ -55,7 +55,6 @@ public class Slaver {
 
             Logger.getLogger("").log(Level.INFO, "start slaver. slaves = " + slaves);
             for (int i = 1; i <= slaves; i++) {
-                Logger.getLogger("").log(Level.INFO, "start init slave = " + i);
                 initSlave(i);
             }
             Thread.sleep(2000 * slaves);
@@ -153,7 +152,9 @@ public class Slaver {
 
         private Response deleter(Request request) {
             long id = LongsFromStrings(request.getParams().get("Id")).get(0);
-            cache.remove(id);
+            if (id != -1) {
+                cache.remove(id);
+            }
             asyncRequestToSlaves(request);
             return new Response(Response.Code.OK, null);
         }

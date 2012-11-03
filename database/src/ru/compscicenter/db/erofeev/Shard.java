@@ -6,7 +6,6 @@ import ru.compscicenter.db.erofeev.communication.*;
 import ru.compscicenter.db.erofeev.database.DBServer;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -33,7 +32,7 @@ public class Shard {
         Launcher.startServer(DBServer.class, new String[]{dbname, String.valueOf(shardIndex), String.valueOf(0), slaverAddress, node.getAddress()});
     }
 
-    public Shard(String dbname, int shardIndex, String routerAddress, int slaves) {
+    public Shard(String dbname, int shardIndex,  String routerAddress, int slaves) {
         this.slaves = slaves;
         this.dbname = dbname;
         this.shardIndex = shardIndex;
@@ -98,7 +97,11 @@ public class Shard {
                 return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
             } else if (request.getParams().containsKey("Id")) {
                 if (request.getType() == Request.RequestType.GET) {
-                    return HttpClient.sendRequest(slaverAddress, request);
+                    if (request.getParams().containsKey("Aliquant")) {
+                        return HttpClient.sendRequest(masterAddress, request);
+                    } else {
+                        return HttpClient.sendRequest(slaverAddress, request);
+                    }
                 } else {
                     return HttpClient.sendRequest(masterAddress, request);
                 }

@@ -53,7 +53,6 @@ public class SerializationStuff {
             readS = new ObjectInputStream(new ByteArrayInputStream(data));
             c = (Serializable) readS.readObject();
         } catch (ClassNotFoundException e) {
-            Logger.getLogger("").info("CNFE");
             return null;
         } catch (StreamCorruptedException e) {
             return new String(data);

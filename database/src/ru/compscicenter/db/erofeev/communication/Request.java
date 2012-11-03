@@ -12,6 +12,14 @@ public class Request {
     private Serializable data;
     private Map<String, List<String>> params;
 
+    public void setType(RequestType type) {
+        this.type = type;
+    }
+
+    public void setData(Serializable data) {
+        this.data = data;
+    }
+
     public enum RequestType {
 
         GET, PUT, DELETE;

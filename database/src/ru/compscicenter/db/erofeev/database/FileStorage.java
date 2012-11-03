@@ -2,6 +2,7 @@ package ru.compscicenter.db.erofeev.database;
 
 import java.io.*;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +43,25 @@ public class FileStorage {
             return true;
         } else {
             return false;
+        }
+    }
+
+
+    public LinkedList<Entity> getAlliquants(int i, int total) {
+        LinkedList<Entity> alliquans = new LinkedList<>();
+        for (Map.Entry<Long, Integer> e : idToIndex.entrySet()) {
+            if ((int) (e.getKey() % total) == i) {
+                alliquans.add(get(e.getKey()));
+            }
+        }
+        return alliquans;
+    }
+
+    public void removeAliquants(int i, int total) {
+        for (Map.Entry<Long, Integer> e : idToIndex.entrySet()) {
+            if ((int) (e.getKey() % total) == i) {
+                delete(e.getKey());
+            }
         }
     }
 
