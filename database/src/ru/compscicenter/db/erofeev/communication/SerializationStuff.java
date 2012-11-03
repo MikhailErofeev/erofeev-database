@@ -1,6 +1,7 @@
 package ru.compscicenter.db.erofeev.communication;
 
 import java.io.*;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -35,16 +36,15 @@ public class SerializationStuff {
         return res;
     }
 
-    public static String getStringFromException(Exception e){
-        StringBuilder exception = new StringBuilder();
-        for (StackTraceElement ste : e.getStackTrace()) {
-            exception.append(ste.toString() + "\n");
-        }
-        return exception.toString();
+    public static String getStringFromException(Throwable t) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        t.printStackTrace(pw);
+        return sw.toString(); // stack trace as a string
     }
 
     public static Serializable getObject(byte[] data) {
-        if (data == null){
+        if (data == null) {
             return null;
         }
         ObjectInputStream readS = null;
@@ -52,13 +52,17 @@ public class SerializationStuff {
         try {
             readS = new ObjectInputStream(new ByteArrayInputStream(data));
             c = (Serializable) readS.readObject();
-            //@TODO узкое место. В базу можно заслать неизвестный класс, и тогда наступит боль
         } catch (ClassNotFoundException e) {
+            Logger.getLogger("").info("CNFE");
             return null;
         } catch (StreamCorruptedException e) {
             return new String(data);
         } catch (IOException e) {
-            return null;
+            if (data.length < 5){ //@TODO какая-то магия, 3-буквенные слова вываливались с IOE
+                return new String(data);
+            }else{
+                return null;
+            }
         }
         if (c instanceof byte[]) {
             return new String((byte[]) c);

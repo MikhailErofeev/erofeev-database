@@ -51,7 +51,7 @@ public class Node {
         serverName = DBName + "_" + role + "_" + address;
         this.role = role;
         ah.setServerName(serverName);
-        Handler handler = new FileHandler("logs/"+DBName + "_" + role + ".log");
+        Handler handler = new FileHandler("logs/" + DBName + "_" + role + ".log");
         Logger.getLogger("").setLevel(Level.INFO);
         Logger.getLogger("").addHandler(handler);
         Logger.getLogger("").info("set logger for " + serverName);
@@ -74,6 +74,8 @@ public class Node {
         Request request = new Request(Request.RequestType.PUT, message);
         request.addParam("Innermessage", result ? "activate_ok" : "activate_fail");
         request.addParam("Server", role);
+        Logger.getLogger("").info("start OK");
+        HttpClient.sendRequest(parentAddress, request);
     }
 
     public static void sendActivateResult(boolean result, Serializable message, String role, String parentAddress) {

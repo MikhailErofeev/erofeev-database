@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -28,15 +29,20 @@ public abstract class AbstractHandler implements HttpHandler {
         this.serverName = serverName;
     }
 
-    private final Request getRequest(HttpExchange exc) throws IOException {
+    private final Request getRequest(HttpExchange exc)  {
         int length = 0;
         if (exc.getRequestHeaders().get("Content-length") != null) {
             length = Integer.parseInt(exc.getRequestHeaders().get("Content-length").get(0));
         }
+        Logger.getLogger("").info("длина тулова: " + length);
         byte[] result = null;
         if (length > 0) {
             result = new byte[length];
-            exc.getRequestBody().read(result);
+            try {
+                exc.getRequestBody().read(result);
+            } catch (IOException e) {
+                Logger.getLogger("").warning(SerializationStuff.getStringFromException(e));
+            }
         }
         Request.RequestType type = Request.RequestType.getType(exc.getRequestMethod());
         Request r = new Request(type, SerializationStuff.getObject(result), exc.getRequestHeaders());
@@ -55,12 +61,14 @@ public abstract class AbstractHandler implements HttpHandler {
     @Override
     public final void handle(HttpExchange exc) throws IOException {
         try {
+            Logger.getLogger("").info("некий входящий запрос");
             Request request = getRequest(exc);
+            Logger.getLogger("").info(request.toString());
             Response response = performRequest(request);
             response.addParam("node", serverName); //помечаем своё присутствие в обработке запроса
             sendResponse(exc, response);
         } catch (IOException e) {
-            e.printStackTrace();
+            Logger.getLogger("").warning(SerializationStuff.getStringFromException(e));
             throw e;
         } finally {
             exc.getResponseBody().flush();

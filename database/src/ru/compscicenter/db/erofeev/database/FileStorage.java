@@ -4,17 +4,27 @@ import java.io.*;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class FileStorage  {
+public class FileStorage {
 
-    /*
-     * @FIXME Поток автоматической записи и подчистки кэша. глючит, на потом.
-     * class Cron implements Runnable { @Override public void run() { while
-     * (true) { try { flush(); cleanStore(); Thread.sleep(1000); } catch
-     * (InterruptedException ex) { } } } }
-     */
+    //@FIXME Поток автоматической записи и подчистки кэша. глючит, на потом.
+    class Cron implements Runnable {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    flush();
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                }
+            }
+        }
+    }
+
     private Map<Long, Entity> store; //ids - сущность, временное хранилище перед flush'eм, кэш
     private Map<Long, Integer> idToIndex; //ids - положение в файле
     private File file;
@@ -53,8 +63,8 @@ public class FileStorage  {
                 Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        //ExecutorService exec = Executors.newCachedThreadPool();
-        //exec.execute(new Cron());
+        ExecutorService exec = Executors.newCachedThreadPool();
+        exec.execute(new Cron());
         restoreIndexes();
     }
 

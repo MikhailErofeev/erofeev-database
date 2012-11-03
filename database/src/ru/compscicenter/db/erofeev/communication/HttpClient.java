@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -59,7 +60,7 @@ public class HttpClient {
     }
 
     private static Response generateResponse(HttpResponse httpResponse) throws IOException {
-        int length = Integer.valueOf(httpResponse.getFirstHeader("Content-Length").getValue());
+        int length = Integer.valueOf(httpResponse.getFirstHeader("Content-length").getValue());
         Serializable data = null;
         if (length > 0) {
             byte[] bytes = new byte[length];
@@ -75,10 +76,12 @@ public class HttpClient {
     }
 
     public static Response sendRequest(String address, Request request) {
+        Logger.getLogger("").info("Start send request " + request + " to addr " + address);
         try {
             DefaultHttpClient client = new DefaultHttpClient();
             HttpUriRequest httpUriRequest = prepareRequest(address, request);
-            System.out.println("request send to " + address);
+            System.out.println("request will send to " + address);
+            System.out.println(request);
             HttpResponse httpResponse = client.execute(httpUriRequest);
             System.out.println("ok");
             return generateResponse(httpResponse);

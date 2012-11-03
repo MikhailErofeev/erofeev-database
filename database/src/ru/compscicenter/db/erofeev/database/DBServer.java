@@ -29,6 +29,7 @@ public class DBServer {
                     master ? "Master_" + indexes : "Slave_" + indexes, new DBHanlder(), parentAddress);
             Logger.getLogger("").info("master = " + master + ". parent = " + parentAddress);
             node.getHttpServer().start();
+            FileStorage.init(dbname + "/shards/shard" + shardIndex + "/" + dbname + serverIndex);
         } catch (IOException e) {
             e.printStackTrace();
             String ex = SerializationStuff.getStringFromException(e);
@@ -49,7 +50,7 @@ public class DBServer {
 
     class DBHanlder extends AbstractHandler {
         private long getID(Request request) {
-            return Long.valueOf(request.getParams().get("id").get(0));
+            return Long.valueOf(request.getParams().get("Id").get(0));
         }
 
         private Response callDB(Request request) {
@@ -66,14 +67,17 @@ public class DBServer {
                 e = new Entity(id, request.getData());
             }
             if (type == Request.RequestType.PUT) {
+                if (e == null) {
+                    return new Response(Response.Code.BAD_REQUEST, null);
+                }
                 instance.put(e);
                 if (master) {
-                    HttpClient.sendRequest(slaverAddress, request);
+                    return HttpClient.sendRequest(slaverAddress, request);
                 }
             } else if (type == Request.RequestType.DELETE) {
                 instance.delete(id);
                 if (master) {
-                    HttpClient.sendRequest(slaverAddress, request);
+                    return HttpClient.sendRequest(slaverAddress, request);
                 }
             } else {
                 Entity res = instance.get(id);

@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -55,8 +56,11 @@ public class Router {
         public Response performRequest(Request request) {
             request.addParam("In", "ok"); //пометка, что запрос пришёл от главного сервера
             if (request.getParams().containsKey("Innermessage")) {
-                String message = request.getParams().get("Innermessage").get(0);
-                shards.add(message);
+                if (request.getParams().get("Innermessage").get(0).equals("activate_ok")) {
+                    shards.add((String) request.getData());
+                } else {
+                    Logger.getLogger("").warning("система не инициализировалась. " + (String) request.getData());
+                }
                 return new Response(Response.Code.OK, null);
             } else if (request.getParams().containsKey("Id")) {
                 List<String> ids = request.getParams().get("Id");
@@ -65,9 +69,8 @@ public class Router {
                 } else {
                     long id = Long.valueOf(ids.get(0));
                     String addr = shards.get((int) (id % shards.size()));
-                    return HttpClient.sendRequest(addr,request);
+                    return HttpClient.sendRequest(addr, request);
                 }
-
             } else {
                 return new Response(Response.Code.FORBIDDEN, "Это " + Router.this.node.getServerName() + ". запрос непоятен. попробуйте добавить Id в header");
             }

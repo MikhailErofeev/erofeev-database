@@ -111,8 +111,8 @@ public class Slaver {
         }
 
         private synchronized Slave getNextSlave() {
-            Slave s = Slaver.this.slaveQueue.remove();
-            Slaver.this.slaveQueue.add(s);
+            Slave s = slaveQueue.poll();
+            slaveQueue.offer(s);
             return s;
         }
 
@@ -131,6 +131,7 @@ public class Slaver {
                     e = new Entity(id, response.getData());
                     Slaver.this.cache.put(id, e);
                 }
+
                 return response;
             } else {
                 return new Response(Response.Code.OK, e.getData());
@@ -171,10 +172,11 @@ public class Slaver {
 
         @Override
         public Response performRequest(Request request) {
-            if (!request.getParams().containsKey("In")) {
-                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
-            } else if (request.getParams().containsKey("Innermessage")) {
+            if (request.getParams().containsKey("Innermessage")) {
+                innerMessagesPerform(request);
                 return new Response(Response.Code.OK, null);
+            } else if (!request.getParams().containsKey("In")) {
+                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
             } else if (request.getParams().containsKey("Id")) {
                 if (request.getType() == Request.RequestType.GET) {
                     return getter(request);

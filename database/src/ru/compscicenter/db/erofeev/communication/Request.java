@@ -29,19 +29,19 @@ public class Request {
     public Request(RequestType type, Serializable data) {
         this.type = type;
         this.data = data;
-        this.params = new HashMap<String, List<String>>();
+        this.params = new HashMap<>();
     }
 
 
     public Request(RequestType type, Serializable data, Map<String, List<String>> params) {
         this.type = type;
         this.data = data;
-        this.params = new HashMap<String, List<String>>();
+        this.params = new HashMap<>();
 
         for (Map.Entry<String, List<String>> entry : params.entrySet()) {
             this.params.put(entry.getKey(), entry.getValue());
         }
-        this.params.remove("Content-Length");
+        this.params.remove("Content-length");
         this.params.remove("Accept-language");
         this.params.remove("Content-type");
         this.params.remove("Accept-encoding");
@@ -50,6 +50,7 @@ public class Request {
         this.params.remove("Accept");
         this.params.remove("Connection");
         this.params.remove("Host");
+        System.out.println("new request: " + this);
     }
 
     public void addParam(String key, String value) {
@@ -66,8 +67,8 @@ public class Request {
     public String toString() {
         StringBuilder sb = new StringBuilder("Request ");
         sb.append(type.toString() + " | ");
-        sb.append(data + " | ");
-        sb.append(params);
+        sb.append(params + " | ");
+        sb.append("Data: " + data + " | ");
         return sb.toString();
     }
 

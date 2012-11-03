@@ -6,6 +6,7 @@ import ru.compscicenter.db.erofeev.communication.*;
 import ru.compscicenter.db.erofeev.database.DBServer;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -23,7 +24,6 @@ public class Shard {
     private int slaves;
     private Node node;
 
-    boolean isReady;
 
     private void initSlaver() throws IOException {
         Launcher.startServer(Slaver.class, new String[]{dbname, String.valueOf(shardIndex), String.valueOf(slaves), node.getAddress()});
@@ -37,12 +37,10 @@ public class Shard {
         this.slaves = slaves;
         this.dbname = dbname;
         this.shardIndex = shardIndex;
-        isReady = false;
         this.routerAddress = routerAddress;
         try {
             node = new Node(dbname, this.getClass().getSimpleName() + shardIndex, new ShardHandler(), routerAddress);
             node.getHttpServer().start();
-            System.out.println("server init at " + node.getAddress());
             initSlaver();
             Thread.sleep(2000 * (slaves + 3));
             node.sendActivateResult(false, "time out at " + node.getServerName());
@@ -50,6 +48,7 @@ public class Shard {
             String ex = SerializationStuff.getStringFromException(e);
             Node.sendActivateResult(false, ex, this.getClass().getSimpleName(), routerAddress);
         }
+
     }
 
     public static void main(String[] args) {
@@ -70,23 +69,23 @@ public class Shard {
                 String data = (String) request.getData();
                 if (server == null) {
                     String ex = SerializationStuff.getStringFromException(new NullPointerException("server == null"));
-                    Shard.this.node.sendActivateResult(false, ex);
+                    node.sendActivateResult(false, ex);
                 } else if (data == null) {
                     String ex = SerializationStuff.getStringFromException(new NullPointerException("data == null"));
-                    Shard.this.node.sendActivateResult(false, ex);
+                    node.sendActivateResult(false, ex);
                 } else if (server.startsWith("Slaver")) {
                     slaverAddress = data;
                     try {
                         initMaster();
                     } catch (Exception e) {
-                        Shard.this.node.sendActivateResult(false, SerializationStuff.getStringFromException(e));
+                        node.sendActivateResult(false, SerializationStuff.getStringFromException(e));
                     }
                 } else if (server.startsWith("Master")) {
                     masterAddress = data;
-                    Shard.this.node.sendTrueActiveateResult();
+                    node.sendTrueActiveateResult();
                 }
             } else if ("activate_fail".equals(message)) {
-                Shard.this.node.sendActivateResult(false, request.getData());
+                node.sendActivateResult(false, request.getData());
             }
         }
 
