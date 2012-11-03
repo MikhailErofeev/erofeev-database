@@ -47,7 +47,7 @@ public class Router {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        new Router("notebook", 1, 1);
+        new Router("notebook", 2, 1);
     }
 
 

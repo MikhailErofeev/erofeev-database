@@ -76,15 +76,14 @@ public class HttpClient {
     }
 
     public static Response sendRequest(String address, Request request) {
-        Logger.getLogger("").info("Start send request " + request + " to addr " + address);
+        Logger.getLogger("").info("send " + request + " to addr " + address);
         try {
             DefaultHttpClient client = new DefaultHttpClient();
             HttpUriRequest httpUriRequest = prepareRequest(address, request);
-            System.out.println("request will send to " + address);
-            System.out.println(request);
             HttpResponse httpResponse = client.execute(httpUriRequest);
-            System.out.println("ok");
-            return generateResponse(httpResponse);
+            Response r =generateResponse(httpResponse);
+                    Logger.getLogger("").info("get response " + r + " from addr " + address);
+            return r;
         } catch (IOException e) {
             e.printStackTrace();
             return null;

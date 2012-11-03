@@ -50,7 +50,6 @@ public class Request {
         this.params.remove("Accept");
         this.params.remove("Connection");
         this.params.remove("Host");
-        System.out.println("new request: " + this);
     }
 
     public void addParam(String key, String value) {

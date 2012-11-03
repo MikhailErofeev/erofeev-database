@@ -34,7 +34,6 @@ public abstract class AbstractHandler implements HttpHandler {
         if (exc.getRequestHeaders().get("Content-length") != null) {
             length = Integer.parseInt(exc.getRequestHeaders().get("Content-length").get(0));
         }
-        Logger.getLogger("").info("длина тулова: " + length);
         byte[] result = null;
         if (length > 0) {
             result = new byte[length];
@@ -61,9 +60,8 @@ public abstract class AbstractHandler implements HttpHandler {
     @Override
     public final void handle(HttpExchange exc) throws IOException {
         try {
-            Logger.getLogger("").info("некий входящий запрос");
             Request request = getRequest(exc);
-            Logger.getLogger("").info(request.toString());
+            Logger.getLogger("").info("get " + request.toString());
             Response response = performRequest(request);
             response.addParam("node", serverName); //помечаем своё присутствие в обработке запроса
             sendResponse(exc, response);
