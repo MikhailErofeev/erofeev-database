@@ -6,10 +6,10 @@ public final class Entity implements Serializable {
 
     public static final long serialVersionUID = 0;
 
-    private long key; //@FIXME от него нужно отказаться, он всегда содержится рядом отдельно
+    private long key;
     transient boolean needFlush;
     transient long lastActive;
-    Serializable data;
+    private Serializable data;
 
     public Entity(long key, Serializable data) {
         needFlush = false;

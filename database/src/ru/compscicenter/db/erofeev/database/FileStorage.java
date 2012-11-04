@@ -26,10 +26,10 @@ public class FileStorage {
         }
     }
 
-    private Map<Long, Entity> store; //ids - сущность, временное хранилище перед flush'eм, кэш
-    private Map<Long, Integer> idToIndex; //ids - положение в файле
-    private File file;
-    private String baseName;
+    private final Map<Long, Entity> store; //ids - сущность, временное хранилище перед flush'eм, кэш
+    private final Map<Long, Integer> idToIndex; //ids - положение в файле
+    private final File file;
+    private final String baseName;
     private boolean needFlush;
     private int lastBaseSize;
     private static final int CACHE_SIZE = 100;
@@ -72,7 +72,7 @@ public class FileStorage {
     private FileStorage(String baseName) {
 
         store = Collections.synchronizedMap(new LruCache(CACHE_SIZE));
-        idToIndex = new ConcurrentHashMap<Long, Integer>();
+        idToIndex = new ConcurrentHashMap<>();
         this.baseName = baseName;
         lastBaseSize = 0;
         file = new File(baseName + ".me");
@@ -122,6 +122,7 @@ public class FileStorage {
         }
     }
 
+    //@FIXME нужно разбить на подфункции
     public synchronized void flush() {
         //@FIXME это попрежнему узкое место, файл переписывается полностью после каждого флуша.
         //решать надо обращением к определённым байтам по началу и концу, зачисткой байтов, дописыванием в конец
@@ -203,7 +204,9 @@ public class FileStorage {
             Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
-                ois.close();
+                if (ois != null) {
+                    ois.close();
+                }
             } catch (IOException ex) {
                 Logger.getLogger(FileStorage.class.getName()).log(Level.SEVERE, null, ex);
             }

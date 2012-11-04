@@ -17,7 +17,6 @@ public class Shard {
 
     private String slaverAddress;
     private String masterAddress;
-    private String routerAddress;
     private String dbname;
     private int shardIndex;
     private int slaves;
@@ -36,7 +35,6 @@ public class Shard {
         this.slaves = slaves;
         this.dbname = dbname;
         this.shardIndex = shardIndex;
-        this.routerAddress = routerAddress;
         try {
             node = new Node(dbname, this.getClass().getSimpleName() + shardIndex, new ShardHandler(), routerAddress);
             node.getHttpServer().start();

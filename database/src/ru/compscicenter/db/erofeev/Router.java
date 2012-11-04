@@ -19,8 +19,8 @@ import java.util.logging.Logger;
  * Time: 4:26 PM
  */
 public class Router {
-    int onInit = 0;
-    boolean addNewShard = false;
+    private int onInit = 0;
+    private boolean addNewShard = false;
 
     void lauchShard(int i) throws IOException {
         onInit++;
@@ -79,12 +79,12 @@ public class Router {
         }
     }
 
-    List<String> shards;
+    private List<String> shards;
 
     private String address;
     private Node node;
-    private String dbname;
-    private int slavesPerShard;
+    private final String dbname;
+    private final int slavesPerShard;
 
     public Router(String dbname, int shards, int slavesPerShard) throws IOException, InterruptedException {
         this.dbname = dbname;
@@ -118,7 +118,7 @@ public class Router {
                         continueAddShard();
                     }
                 } else {
-                    Logger.getLogger("").warning("система не инициализировалась. " + (String) request.getData());
+                    Logger.getLogger("").warning("система не инициализировалась. " + request.getData());
                 }
                 return new Response(Response.Code.OK, null);
             } else if (request.getParams().containsKey("Command")) {
@@ -152,10 +152,3 @@ public class Router {
 
     }
 }
-
-
-/*
-Проблема - у меня хеш по 0, 1
-Я добавляю 3 сервер. хэш по 0, 1, 2
-мне нужно из старых серверов вытащить
-*/

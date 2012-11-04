@@ -25,14 +25,12 @@ import java.util.logging.Logger;
 public class Slaver {
 
     private Node node;
-    private int slavesN;
-    private String shardAddress;
+    private final int slavesN;
     private Queue<Slave> slaveQueue; //читаем по очереди
-    private List<Slave> slaveList; //пишем во все сразу
+    private final List<Slave> slaveList; //пишем во все сразу
     private String dbname;
     private final int shardIndex;
-    private Map<Long, Entity> cache;
-    private final int CACHE_SIZE = 10000;
+    private final Map<Long, Entity> cache;
     private ExecutorService exec = Executors.newCachedThreadPool();
 
 
@@ -40,13 +38,13 @@ public class Slaver {
         Launcher.startServer(DBServer.class, new String[]{dbname, String.valueOf(shardIndex), String.valueOf(serverIndex), node.getAddress(), "-"});
     }
 
-    public Slaver(String name, int shardIndex, int slaves, String shardAddress) {
+    private Slaver(String name, int shardIndex, int slaves, String shardAddress) {
         this.dbname = name;
         this.shardIndex = shardIndex;
-        this.shardAddress = shardAddress;
         slavesN = slaves;
-        this.slaveQueue = new LinkedBlockingQueue<Slave>();
-        this.slaveList = new LinkedList<Slave>();
+        this.slaveQueue = new LinkedBlockingQueue<>();
+        this.slaveList = new LinkedList<>();
+        int CACHE_SIZE = 10000;
         cache = Collections.synchronizedMap(new LruCache(CACHE_SIZE));
         node = null;
         try {
@@ -70,7 +68,7 @@ public class Slaver {
     }
 
     class Slave {
-        public String addr;
+        public final String addr;
         public int actives;
 
         public Slave(String addr) {
@@ -123,7 +121,7 @@ public class Slaver {
         private Response getter(Request request) {
             long id = LongsFromStrings(request.getParams().get("Id")).get(0);
             Entity e = Slaver.this.cache.get(id);
-            Response response = null;
+            Response response;
             if (e == null) {
                 response = readFromSlave(request);
                 if (response.getCode() == Response.Code.OK) {
@@ -166,7 +164,7 @@ public class Slaver {
             }
 
             @Override
-            public void performResponce(Response response) {
+            public void performResponse(Response response) {
                 //@TODO что если что-то пошло не так?
             }
         }

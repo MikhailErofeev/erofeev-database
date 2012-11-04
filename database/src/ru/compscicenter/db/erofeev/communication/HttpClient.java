@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 public class HttpClient {
 
     private static HttpUriRequest prepareRequest(String address, Request request) {
-        HttpUriRequest httpRequest = null;
+        HttpUriRequest httpRequest;
         if (request.getType() == Request.RequestType.PUT) {
             HttpPut hp = new HttpPut(address);
             ByteArrayEntity bae = new ByteArrayEntity(SerializationStuff.getBytes(request.getData()));
@@ -43,19 +43,19 @@ public class HttpClient {
     }
 
     public abstract static class AsyncHttpClient implements Runnable {
-        private String addr;
-        private Request request;
+        private final String addr;
+        private final Request request;
 
         protected AsyncHttpClient(String addr, Request request) {
             this.addr = addr;
             this.request = request;
         }
 
-        public abstract void performResponce(Response response);
+        public abstract void performResponse(Response response);
 
         @Override
         public void run() {
-            performResponce(HttpClient.sendRequest(addr, request));
+            performResponse(HttpClient.sendRequest(addr, request));
         }
     }
 

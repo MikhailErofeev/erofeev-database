@@ -10,7 +10,7 @@ public class Request {
 
     private RequestType type;
     private Serializable data;
-    private Map<String, List<String>> params;
+    private final Map<String, List<String>> params;
 
     public void setType(RequestType type) {
         this.type = type;

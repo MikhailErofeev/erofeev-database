@@ -47,8 +47,8 @@ public class SerializationStuff {
         if (data == null) {
             return null;
         }
-        ObjectInputStream readS = null;
-        Serializable c = null;
+        ObjectInputStream readS;
+        Serializable c;
         try {
             readS = new ObjectInputStream(new ByteArrayInputStream(data));
             c = (Serializable) readS.readObject();

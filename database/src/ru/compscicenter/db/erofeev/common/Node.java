@@ -5,6 +5,7 @@ import ru.compscicenter.db.erofeev.communication.AbstractHandler;
 import ru.compscicenter.db.erofeev.communication.HttpClient;
 import ru.compscicenter.db.erofeev.communication.Request;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
@@ -23,7 +24,7 @@ import java.util.logging.Logger;
 
 public class Node {
 
-    public static HttpServer allocateServer(int portStart) {
+    private static HttpServer allocateServer(int portStart) {
         HttpServer server;
         while (true) {
             try {
@@ -38,19 +39,23 @@ public class Node {
     private HttpServer httpServer;
     private String serverName;
     private String address;
-    private AbstractHandler handler;
-    private String parentAddress;
+    private final String parentAddress;
     private String role;
 
     public Node(String DBName, String role, AbstractHandler ah, String parentAddress) throws IOException {
         this.parentAddress = parentAddress;
-        handler = ah;
         httpServer = create();
         //@FIXME получить нормальный адрес из httpServer неполучилось
         address = "http://localhost" + ":" + httpServer.getAddress().getPort();
         serverName = DBName + "_" + role + "_" + address;
         this.role = role;
         ah.setServerName(serverName);
+        File f = new File("logs");
+        if (f.exists()) {
+            f.delete();
+        } else {
+            f.mkdir();
+        }
         Handler handler = new FileHandler("logs/" + DBName + "_" + role + ".log");
         Logger.getLogger("").setLevel(Level.INFO);
         Logger.getLogger("").addHandler(handler);
@@ -66,7 +71,7 @@ public class Node {
         return serverName;
     }
 
-    boolean isReady;
+    private boolean isReady;
 
     //огромная конструкция на случай ошибки при инициализации Node
     private static synchronized void sendActivateResult(boolean result, Serializable message,
@@ -95,7 +100,7 @@ public class Node {
     }
 
 
-    private static HttpServer create() throws IOException {
+    private static HttpServer create() {
         HttpServer server = allocateServer(2300);
         return server;
     }

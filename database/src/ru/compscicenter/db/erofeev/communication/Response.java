@@ -11,7 +11,7 @@ import java.util.Map;
 public class Response {
     private Serializable data;
     private Code code;
-    private Map<String, List<String>> params;
+    private final Map<String, List<String>> params;
 
     public enum Code {
         OK(200), NOT_FOUND(404), BAD_REQUEST(400),
@@ -37,7 +37,7 @@ public class Response {
     public Response(Code code, Serializable data) {
         this.code = code;
         this.data = data;
-        this.params = new HashMap<String, List<String>>();
+        this.params = new HashMap<>();
     }
 
     public void addParam(String key, String value) {

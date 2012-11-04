@@ -15,7 +15,7 @@ import java.util.LinkedList;
 import java.util.logging.Logger;
 
 public class DBServer {
-    Node node;
+    private Node node;
 
     private boolean master;
     private String slaverAddress;
@@ -55,7 +55,7 @@ public class DBServer {
 
         private Response callDB(Request request) {
             FileStorage instance = FileStorage.getInstance();
-            long id = -1;
+            long id;
             try {
                 id = getID(request);
             } catch (Exception e) {
