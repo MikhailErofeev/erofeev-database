@@ -35,7 +35,7 @@ public class Router {
 
     void continueAddShard() {
         int i = 0;
-        for (String addr : shards.subList(0, shards.size() - 1)) {
+        for (String addr : shards) {
             Request request = new Request(Request.RequestType.GET, null);
             request.addParam("Id", "-1");
             request.addParam("In", "ok");
@@ -47,8 +47,8 @@ public class Router {
             putAll(entityList);
             request.setType(Request.RequestType.DELETE);
             HttpClient.sendRequest(addr, request);
+            i++;
         }
-        i++;
     }
 
     void putAll(List<Entity> entityList) {
@@ -131,13 +131,20 @@ public class Router {
         public Response performRequest(Request request) {
             request.addParam("In", "ok"); //пометка, что запрос пришёл от главного сервера
             if (request.getParams().containsKey("Innermessage")) {
-                onInit--;
                 if (request.getParams().get("Innermessage").get(0).equals("activate_ok")) {
+                    onInit--;
                     shards.add((String) request.getData());
                     Collections.sort(shards);
                     if (onInit == 0 && addNewShard) {
                         addNewShard = false;
                         continueAddShard();
+                    }
+                } else if (request.getParams().get("Innermessage").get(0).equals("isActual")) {
+                    String shard = request.getParams().get("Address").get(0);
+                    if (shards.contains(shard)) {
+                        return new Response(Response.Code.OK, null);
+                    } else {
+                        return new Response(Response.Code.NOT_FOUND, null);
                     }
                 } else {
                     Logger.getLogger("").warning("система не инициализировалась. " + request.getData());

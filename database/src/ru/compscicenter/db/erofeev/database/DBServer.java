@@ -111,6 +111,13 @@ public class DBServer {
         @Override
         public Response performRequest(Request request) {
             if (request.getParams().containsKey("Innermessage")) {
+                String inner = request.getParams().get("Innermessage").get(0);
+                if ("exit".equals(inner)) {
+                    node.getHttpServer().stop(23);
+                    FileStorage.getInstance().flush();
+                    Logger.getLogger("").info("exit");
+                    System.exit(23);
+                }
                 return new Response(Response.Code.OK, null);
             } else if (!request.getParams().containsKey("In")) {
                 return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");

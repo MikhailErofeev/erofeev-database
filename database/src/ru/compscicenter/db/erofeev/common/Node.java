@@ -5,7 +5,6 @@ import ru.compscicenter.db.erofeev.communication.AbstractHandler;
 import ru.compscicenter.db.erofeev.communication.HttpClient;
 import ru.compscicenter.db.erofeev.communication.Request;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
@@ -73,8 +72,8 @@ public class Node {
         Request request = new Request(Request.RequestType.PUT, message);
         request.addParam("Innermessage", result ? "activate_ok" : "activate_fail");
         request.addParam("Server", role);
-        Logger.getLogger("").info("start OK");
         HttpClient.sendRequest(parentAddress, request);
+        Logger.getLogger("").info("start OK");
     }
 
     public static void sendActivateResult(boolean result, Serializable message, String role, String parentAddress) {

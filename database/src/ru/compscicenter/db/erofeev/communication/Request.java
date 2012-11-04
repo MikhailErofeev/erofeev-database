@@ -25,6 +25,9 @@ public class Request {
         GET, PUT, DELETE;
 
         static RequestType getType(String type) {
+            if (type.equalsIgnoreCase("POST")) {
+                return PUT;
+            }
             for (RequestType rt : RequestType.values()) {
                 if (rt.name().equalsIgnoreCase(type)) {
                     return rt;

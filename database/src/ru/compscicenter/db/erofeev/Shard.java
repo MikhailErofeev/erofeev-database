@@ -1,11 +1,15 @@
 package ru.compscicenter.db.erofeev;
 
+import ru.compscicenter.db.erofeev.common.AbstractCron;
 import ru.compscicenter.db.erofeev.common.Launcher;
 import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.*;
 import ru.compscicenter.db.erofeev.database.DBServer;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -21,6 +25,29 @@ public class Shard {
     private int shardIndex;
     private int slaves;
     private Node node;
+    private final String routerAddress;
+
+    class ActualCron extends AbstractCron {
+
+        protected ActualCron(long ms) {
+            super(ms);
+        }
+
+        @Override
+        protected void action() {
+            Request request = new Request(Request.RequestType.GET, null);
+            request.addParam("Innermessage", "isActual");
+            request.addParam("Address", node.getAddress());
+            Response response = HttpClient.sendRequest(routerAddress, request);
+            if (response == null || response.getCode() != Response.Code.OK) {
+                Request exitRequest = new Request(Request.RequestType.GET, null);
+                exitRequest.addParam("Innermessage", "exit");
+                exitRequest.addParam("In", "ok");
+                exit(exitRequest);
+            }
+
+        }
+    }
 
 
     private void initSlaver() throws IOException {
@@ -31,10 +58,11 @@ public class Shard {
         Launcher.startServer(DBServer.class, new String[]{dbname, String.valueOf(shardIndex), String.valueOf(0), slaverAddress, node.getAddress()});
     }
 
-    public Shard(String dbname, int shardIndex,  String routerAddress, int slaves) {
+    public Shard(String dbname, int shardIndex, String routerAddress, int slaves) {
         this.slaves = slaves;
         this.dbname = dbname;
         this.shardIndex = shardIndex;
+        this.routerAddress = routerAddress;
         try {
             node = new Node(dbname, this.getClass().getSimpleName() + shardIndex, new ShardHandler(), routerAddress);
             node.getHttpServer().start();
@@ -54,6 +82,14 @@ public class Shard {
         } else {
             new Shard(args[0], Integer.valueOf(args[1]), args[2], Integer.valueOf(args[3]));
         }
+    }
+
+    private void exit(Request request) {
+        HttpClient.sendRequest(slaverAddress, request);
+        HttpClient.sendRequest(masterAddress, request);
+        node.getHttpServer().stop(23);
+        Logger.getLogger("").info("exit");
+        System.exit(23);
     }
 
 
@@ -80,9 +116,13 @@ public class Shard {
                 } else if (server.startsWith("Master")) {
                     masterAddress = data;
                     node.sendTrueActiveateResult();
+                    ExecutorService exec = Executors.newCachedThreadPool();
+                    exec.execute(new ActualCron(10000));
                 }
             } else if ("activate_fail".equals(message)) {
                 node.sendActivateResult(false, request.getData());
+            } else if ("exit".equals(message)) {
+                exit(request);
             }
         }
 

@@ -51,7 +51,7 @@ public class Slaver {
             node = new Node(name, this.getClass().getSimpleName() + shardIndex, new SlaverHandler(), shardAddress);
             node.getHttpServer().start();
 
-            Logger.getLogger("").log(Level.INFO, "start slaver. slaves = " + slaves);
+            Logger.getLogger("").log(Level.INFO, "try tostart slaver. slaves = " + slaves);
             for (int i = 1; i <= slaves; i++) {
                 initSlave(i);
             }
@@ -104,6 +104,13 @@ public class Slaver {
                 }
             } else if ("activate_fail".equals(message)) {
                 Slaver.this.node.sendActivateResult(false, request.getData());
+            } else if ("exit".equals(message)) {
+                for (Slave s : slaveList) {
+                    HttpClient.sendRequest(s.addr, request);
+                }
+                node.getHttpServer().stop(23);
+                Logger.getLogger("").info("exit");
+                System.exit(23);
             }
         }
 

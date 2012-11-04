@@ -54,10 +54,6 @@ public class Response {
         return params;
     }
 
-    public static int getResponceCode(HttpResponse hp) {
-        return hp.getStatusLine().getStatusCode();
-    }
-
     public Serializable getData() {
         return data;
     }

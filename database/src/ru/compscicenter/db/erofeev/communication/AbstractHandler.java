@@ -29,7 +29,7 @@ public abstract class AbstractHandler implements HttpHandler {
         this.serverName = serverName;
     }
 
-    private final Request getRequest(HttpExchange exc)  {
+    private final Request getRequest(HttpExchange exc) {
         int length = 0;
         if (exc.getRequestHeaders().get("Content-length") != null) {
             length = Integer.parseInt(exc.getRequestHeaders().get("Content-length").get(0));
@@ -62,7 +62,12 @@ public abstract class AbstractHandler implements HttpHandler {
         try {
             Request request = getRequest(exc);
             Logger.getLogger("").info("get " + request.toString());
-            Response response = performRequest(request);
+            Response response;
+            try {
+                response = performRequest(request);
+            } catch (Exception e) {
+                response = new Response(Response.Code.BAD_REQUEST, SerializationStuff.getStringFromException(e));
+            }
             response.addParam("node", serverName); //помечаем своё присутствие в обработке запроса
             sendResponse(exc, response);
         } catch (IOException e) {
@@ -91,6 +96,7 @@ public abstract class AbstractHandler implements HttpHandler {
         if (data != null) {
             exc.getResponseBody().write(data);
         }
+        Logger.getLogger("").info("send response " + response);
 
     }
 

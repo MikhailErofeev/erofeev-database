@@ -1,5 +1,7 @@
 package ru.compscicenter.db.erofeev.database;
 
+import ru.compscicenter.db.erofeev.common.AbstractCron;
+
 import java.io.*;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -13,16 +15,15 @@ import java.util.logging.Logger;
 public class FileStorage {
 
     //@FIXME Поток автоматической записи и подчистки кэша. глючит, на потом.
-    class Cron implements Runnable {
+    class FlushCron extends AbstractCron {
+
+        FlushCron(long ms) {
+            super(ms);
+        }
+
         @Override
-        public void run() {
-            while (true) {
-                try {
-                    flush();
-                    Thread.sleep(500);
-                } catch (InterruptedException ex) {
-                }
-            }
+        protected void action() {
+            flush();
         }
     }
 
@@ -50,7 +51,7 @@ public class FileStorage {
     public LinkedList<Entity> getAlliquants(int i, int total) {
         LinkedList<Entity> alliquans = new LinkedList<>();
         for (Map.Entry<Long, Integer> e : idToIndex.entrySet()) {
-            if ((int) (e.getKey() % total) == i) {
+            if ((int) (e.getKey() % total) != i) {
                 alliquans.add(get(e.getKey()));
             }
         }
@@ -59,7 +60,7 @@ public class FileStorage {
 
     public void removeAliquants(int i, int total) {
         for (Map.Entry<Long, Integer> e : idToIndex.entrySet()) {
-            if ((int) (e.getKey() % total) == i) {
+            if ((int) (e.getKey() % total) != i) {
                 delete(e.getKey());
             }
         }
@@ -84,7 +85,7 @@ public class FileStorage {
             }
         }
         ExecutorService exec = Executors.newCachedThreadPool();
-        exec.execute(new Cron());
+        exec.execute(new FlushCron(500));
         restoreIndexes();
     }
 

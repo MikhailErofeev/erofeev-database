@@ -15,9 +15,9 @@ public class Launcher {
     public static void startServer(Class className, String[] params) throws IOException{
         StringBuilder command = new StringBuilder();
         command.append("java -cp " + PATH + ":"+
-                "lib/httpcomponents-client-4.2.1/lib/httpclient-4.2.1.jar:" +
-                "lib/httpcomponents-client-4.2.1/lib/httpcore-4.2.1.jar:" +
-                "lib/httpcomponents-client-4.2.1/lib/commons-logging-1.1.1.jar");
+                "database/lib/httpcomponents-client-4.2.1/lib/httpclient-4.2.1.jar:" +
+                "database/lib/httpcomponents-client-4.2.1/lib/httpcore-4.2.1.jar:" +
+                "database/lib/httpcomponents-client-4.2.1/lib/commons-logging-1.1.1.jar");
         //@FIXME кажется я выстрелил себе в ногу
         command.append(" " + className.getCanonicalName());
         for (String s : params) {
