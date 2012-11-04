@@ -137,7 +137,7 @@ public class Router {
                     Collections.sort(shards);
                     if (onInit == 0 && addNewShard) {
                         addNewShard = false;
-                        continueAddShard();
+                        continueAddShard(); //@FIXME похоже невозможно выполнить запросы, пока не послан ответ на данный запрос
                     }
                 } else if (request.getParams().get("Innermessage").get(0).equals("isActual")) {
                     String shard = request.getParams().get("Address").get(0);
@@ -153,6 +153,7 @@ public class Router {
             } else if (request.getParams().containsKey("Command")) {
                 String command = request.getParams().get("Command").get(0);
                 if (command.equals("add_shard")) {
+                    return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". Ф-ия безбожно глючит, поэтому временно ограничена");
                     try {
                         addNewShard = true;
                         addShard();

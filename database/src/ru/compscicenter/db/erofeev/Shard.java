@@ -19,6 +19,7 @@ import java.util.logging.Logger;
  */
 public class Shard {
 
+    private static final int ACTUAL_CHECK_FREQ = 100 * 1000;
     private String slaverAddress;
     private String masterAddress;
     private String dbname;
@@ -92,7 +93,6 @@ public class Shard {
         System.exit(23);
     }
 
-
     class ShardHandler extends AbstractHandler {
 
         void innerMessagesPerform(Request request) {
@@ -117,7 +117,7 @@ public class Shard {
                     masterAddress = data;
                     node.sendTrueActiveateResult();
                     ExecutorService exec = Executors.newCachedThreadPool();
-                    exec.execute(new ActualCron(10000));
+                    exec.execute(new ActualCron(ACTUAL_CHECK_FREQ));
                 }
             } else if ("activate_fail".equals(message)) {
                 node.sendActivateResult(false, request.getData());
