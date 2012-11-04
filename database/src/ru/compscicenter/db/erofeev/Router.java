@@ -96,7 +96,29 @@ public class Router {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        File f = new File("logs");
+        if (f.exists()) {
+            removeDirectory(f);
+        }
+        f.mkdir();
         new Router("notebook", 2, 1);
+    }
+
+    private static boolean removeDirectory(File directory) {
+        String[] list = directory.list();
+        if (list != null) {
+            for (int i = 0; i < list.length; i++) {
+                File entry = new File(directory, list[i]);
+                if (entry.isDirectory()) {
+                    if (!removeDirectory(entry))
+                        return false;
+                } else {
+                    if (!entry.delete())
+                        return false;
+                }
+            }
+        }
+        return directory.delete();
     }
 
     String getHasedAddress(long id) {

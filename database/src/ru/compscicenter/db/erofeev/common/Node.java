@@ -50,12 +50,6 @@ public class Node {
         serverName = DBName + "_" + role + "_" + address;
         this.role = role;
         ah.setServerName(serverName);
-        File f = new File("logs");
-        if (f.exists()) {
-            f.delete();
-        } else {
-            f.mkdir();
-        }
         Handler handler = new FileHandler("logs/" + DBName + "_" + role + ".log");
         Logger.getLogger("").setLevel(Level.INFO);
         Logger.getLogger("").addHandler(handler);
