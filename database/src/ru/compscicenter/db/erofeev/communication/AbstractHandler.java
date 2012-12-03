@@ -2,6 +2,8 @@ package ru.compscicenter.db.erofeev.communication;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import ru.compscicenter.db.erofeev.communication.Request;
+import ru.compscicenter.db.erofeev.communication.Response;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -48,13 +50,6 @@ public abstract class AbstractHandler implements HttpHandler {
         return r;
     }
 
-    protected List<Long> LongsFromStrings(List<String> strings) {
-        List<Long> longs = new LinkedList<>();
-        for (String s : strings) {
-            longs.add(Long.valueOf(s));
-        }
-        return longs;
-    }
 
 
     @Override

@@ -11,41 +11,45 @@ import ru.compscicenter.db.erofeev.common.Node;
 import ru.compscicenter.db.erofeev.communication.*;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.Random;
 import java.util.logging.Logger;
 
 public class DBServer {
     private Node node;
 
     private boolean master;
-    private String slaverAddress;
 
-    public DBServer(String dbname, int shardIndex, int serverIndex, String slaverAddress, String shardAddress) {
-        master = serverIndex == 0;
-        String parentAddress = master ? shardAddress : slaverAddress;
-        this.slaverAddress = slaverAddress;
+    public DBServer(String dbname, int shardID, String router, boolean isMaster) {
+        master = isMaster;
         try {
-            String indexes = shardIndex + "_" + serverIndex;
             node = new Node(dbname,
-                    master ? "Master_" + indexes : "Slave_" + indexes, new DBHanlder(), parentAddress);
-            Logger.getLogger("").info("master = " + master + ". parent = " + parentAddress);
+                    master ? "Master_" + shardID : "Slave_" + shardID,
+                    new DBHanlder(), router);
+            Logger.getLogger("").info("master = " + master + ". parent = " + router);
             node.getHttpServer().start();
-            FileStorage.init(dbname + "/shards/shard" + shardIndex + "/" + dbname + serverIndex);
+            FileStorage.init(dbname + "/shards/shard" + shardID + "/" + new Random().nextInt() % 1000);
         } catch (IOException e) {
             e.printStackTrace();
             String ex = SerializationStuff.getStringFromException(e);
-            Logger.getLogger("").warning(ex);
-            Node.sendActivateResult(false, ex, this.getClass().getSimpleName(), parentAddress);
+            Request request = new Request(Request.RequestType.PUT, ex);
+            request.addParam("Innermessage", "fail");
+            request.addParam("Shard", String.valueOf(shardID));
+            HttpClient.sendRequest(router, request);
+            System.exit(23);
             return;
         }
-        node.sendTrueActiveateResult();
+        Request request = new Request(Request.RequestType.PUT, node.getAddress());
+        request.addParam("Innermessage", master ? "added_master" : "added_slave");
+        request.addParam("Shard", String.valueOf(shardID));
+        HttpClient.sendRequest(router, request);
+        Logger.getLogger("").info("start OK");
 
     }
 
 
     public static void main(String[] args) throws IOException {
         new DBServer(args[0], Integer.valueOf(args[1]),
-                Integer.valueOf(args[2]), args[3], args[4]);
+                args[2], Boolean.valueOf(args[3]));
     }
 
     class DBHanlder extends AbstractHandler {
@@ -71,40 +75,12 @@ public class DBServer {
                     return new Response(Response.Code.BAD_REQUEST, null);
                 }
                 instance.put(e);
-                if (master) {
-                    return HttpClient.sendRequest(slaverAddress, request);
-                }
             } else if (type == Request.RequestType.DELETE) {
-                if (request.getParams().containsKey("Aliquant")) {
-                    int total = Integer.valueOf(request.getParams().get("Aliquant_total").get(0));
-                    int i = Integer.valueOf(request.getParams().get("Aliquant_index").get(0));
-                    instance.removeAliquants(i, total);
-                    if (master) {
-                        return HttpClient.sendRequest(slaverAddress, request);
-                    }
-                } else {
-                    instance.delete(id);
-                    if (master) {
-                        return HttpClient.sendRequest(slaverAddress, request);
-                    }
-                }
-            } else {
-                if (request.getParams().containsKey("Aliquant")) {
-                    Logger.getLogger("").info("start Aliquant");
-                    int total = Integer.valueOf(request.getParams().get("Aliquant_total").get(0));
-                    int i = Integer.valueOf(request.getParams().get("Aliquant_index").get(0));
-                    LinkedList<Entity> res = instance.getAlliquants(i, total);
-                    Logger.getLogger("").info(res.toString());
-                    return new Response(Response.Code.OK, res);
-                } else {
-                    Entity res = instance.get(id);
-                    if (res == null) {
-                        return new Response(Response.Code.NOT_FOUND, null);
-                    } else {
-                        return new Response(Response.Code.OK, res.getData());
-                    }
-                }
+                instance.delete(id);
+            } else if (type == Request.RequestType.GET) {
+                return new Response(Response.Code.OK, instance.get(id));
             }
+            //@TODO перераспределние по шардам
             return new Response(Response.Code.OK, null);
         }
 
@@ -126,7 +102,6 @@ public class DBServer {
             } else {
                 return new Response(Response.Code.FORBIDDEN, "Это " + node.getServerName() + ". запрос непоятен. роутер, ты чего творишь?");
             }
-
         }
 
     }

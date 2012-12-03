@@ -1,5 +1,7 @@
 package ru.compscicenter.db.erofeev.database;
 
+import ru.compscicenter.db.erofeev.communication.Entity;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -19,7 +21,7 @@ public class LruCache extends LinkedHashMap<Long, Entity> {
 
     @Override
     protected boolean removeEldestEntry(final Map.Entry<Long, Entity> eldest) {
-        if (eldest.getValue().needFlush) {
+        if (eldest.getValue().isNeedFlush()) {
             return false;
         } else {
             return super.size() > maxEntries;

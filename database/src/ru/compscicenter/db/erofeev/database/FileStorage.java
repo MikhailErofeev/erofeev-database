@@ -1,6 +1,7 @@
 package ru.compscicenter.db.erofeev.database;
 
 import ru.compscicenter.db.erofeev.common.AbstractCron;
+import ru.compscicenter.db.erofeev.communication.Entity;
 
 import java.io.*;
 import java.util.Collections;
@@ -146,10 +147,10 @@ public class FileStorage {
                     readed = (Entity) objectInputStream.readObject();
                     if (idToIndex.containsKey(readed.getKey())) { //если содержится в индексах, 
                         inMem = store.get(readed.getKey());
-                        if (inMem != null && inMem.needFlush) { //то проверяем, изменился ли
+                        if (inMem != null && inMem.isNeedFlush()) { //то проверяем, изменился ли
                             writeS.writeObject(inMem);
                             readed = inMem;
-                            inMem.needFlush = false;
+                            inMem.setNeedFlush(false);
                         } else { //если не изменился, то старый и пишем
                             writeS.writeObject(readed);
                         }
@@ -158,10 +159,10 @@ public class FileStorage {
                 }
             }
             for (Entity e : store.values()) { //для всех объектов во временном хранилище
-                if (e.needFlush) { //если их не было в базе (если бы были, они бы уже заслались)
+                if (e.isNeedFlush()) { //если их не было в базе (если бы были, они бы уже заслались)
                     idToIndex.put(e.getKey(), inserted++); //добавлям в индексы
                     writeS.writeObject(e); //и в базу
-                    e.needFlush = false;
+                    e.setNeedFlush(false);
                 }
 
             }
@@ -225,9 +226,9 @@ public class FileStorage {
     }
 
     private void create(Entity e) {
-        e.needFlush = true;
+        e.setNeedFlush(true);
         needFlush = true;
-        e.lastActive = System.currentTimeMillis();
+        e.setLastActive(System.currentTimeMillis());
         store.put(e.getKey(), e);
     }
 
@@ -243,15 +244,15 @@ public class FileStorage {
             return null;
         }
         if (rslt != null) {
-            rslt.lastActive = System.currentTimeMillis();
+            rslt.setLastActive(System.currentTimeMillis());
         }
         return rslt;
     }
 
     private synchronized void update(Entity e) {
         Long key = e.getKey();
-        e.lastActive = System.currentTimeMillis();
-        e.needFlush = true;
+        e.setLastActive(System.currentTimeMillis());
+        e.setNeedFlush(true);
         needFlush = true;
         store.put(key, e);
     }

@@ -23,7 +23,7 @@ public class Launcher {
         for (String s : params) {
             command.append(" '" + s + "'");
         }
-        System.out.println(command.toString());
+//        System.out.println(command.toString());
         ProcessBuilder pb = new ProcessBuilder("bash", "-c", command.toString());
         pb.start();
     }

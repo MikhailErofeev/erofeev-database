@@ -1,16 +1,16 @@
 package ru.compscicenter.db.erofeev;
 
-import ru.compscicenter.db.erofeev.common.Launcher;
 import ru.compscicenter.db.erofeev.common.Node;
-import ru.compscicenter.db.erofeev.communication.*;
-import ru.compscicenter.db.erofeev.database.Entity;
+import ru.compscicenter.db.erofeev.communication.AbstractHandler;
+import ru.compscicenter.db.erofeev.communication.Entity;
+import ru.compscicenter.db.erofeev.communication.Request;
+import ru.compscicenter.db.erofeev.communication.Response;
+import ru.compscicenter.db.erofeev.database.LruCache;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,20 +22,27 @@ public class Router {
     private int onInit = 0;
     private boolean addNewShard = false;
 
-    void lauchShard(int i) throws IOException {
-        onInit++;
-        Launcher.startServer(Shard.class, new String[]{dbname, String.valueOf(i), address, String.valueOf(slavesPerShard)});
-    }
+    private List<Shard> shards;
 
-    void addShard() throws IOException {
-        File shard = new File("./" + dbname + "/shards/shard" + shards.size());
-        shard.mkdirs();
-        lauchShard(shards.size());
+    private Node node;
+    private final String dbname;
+    private final int slavesPerShard;
+
+    private LruCache cache;
+    private static final int CACHE_SIZE = 5;
+
+    public Router(String dbname, int shards, int slavesPerShard) throws IOException, InterruptedException {
+        this.dbname = dbname;
+        this.slavesPerShard = slavesPerShard;
+        node = new Node(dbname, "router", new RouterHandler(), null);
+        node.getHttpServer().start();
+        initShards(shards);
+        cache = new LruCache(CACHE_SIZE);
     }
 
     void continueAddShard() {
         int i = 0;
-        for (String addr : shards) {
+      /*  for (String addr : shards) {
             Request request = new Request(Request.RequestType.GET, null);
             request.addParam("Id", "-1");
             request.addParam("In", "ok");
@@ -48,7 +55,7 @@ public class Router {
             request.setType(Request.RequestType.DELETE);
             HttpClient.sendRequest(addr, request);
             i++;
-        }
+        }*/
     }
 
     void putAll(List<Entity> entityList) {
@@ -59,8 +66,16 @@ public class Router {
             r.setData(e.getData());
             r.getParams().remove("Id");
             r.addParam("Id", e.getKey() + "");
-            HttpClient.sendRequest(getHasedAddress(e.getKey()), r);
+//            HttpClient.sendRequest(getHasedAddress(e.getKey()), r);
         }
+    }
+
+    public String getDbname() {
+        return dbname;
+    }
+
+    public int getSlavesPerShard() {
+        return slavesPerShard;
     }
 
     void initShards(int shards) throws IOException, InterruptedException {
@@ -75,24 +90,37 @@ public class Router {
         this.shards = new LinkedList<>();
         for (int i = 0; i < shards; i++) {
             lauchShard(i);
-            Thread.sleep(500);
         }
     }
 
-    private List<String> shards;
 
-    private String address;
-    private Node node;
-    private final String dbname;
-    private final int slavesPerShard;
+    void lauchShard(int i) throws IOException {
+        onInit++;
+        Shard shard;
+        try {
+            shard = new Shard(this, i);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+        shards.add(shard);
+    }
 
-    public Router(String dbname, int shards, int slavesPerShard) throws IOException, InterruptedException {
-        this.dbname = dbname;
-        this.slavesPerShard = slavesPerShard;
-        node = new Node(dbname, "router", new RouterHandler(), null);
-        node.getHttpServer().start();
-        this.address = node.getAddress();
-        initShards(shards);
+
+    void addShard() throws IOException {
+        File shard = new File("./" + dbname + "/shards/shard" + shards.size());
+        shard.mkdirs();
+        lauchShard(shards.size());
+    }
+
+
+    public Node getNode() {
+        return node;
+    }
+
+
+    public LruCache getCache() {
+        return cache;
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -121,7 +149,7 @@ public class Router {
         return directory.delete();
     }
 
-    String getHasedAddress(long id) {
+    Shard getHasedAddress(long id) {
         return shards.get((int) (id % shards.size()));
     }
 
@@ -129,38 +157,30 @@ public class Router {
     class RouterHandler extends AbstractHandler {
         @Override
         public Response performRequest(Request request) {
-            request.addParam("In", "ok"); //пометка, что запрос пришёл от главного сервера
+            System.out.println(request);
+//            request.addParam("In", "ok"); //пометка, что запрос пришёл от главного сервера
             if (request.getParams().containsKey("Innermessage")) {
-                if (request.getParams().get("Innermessage").get(0).equals("activate_ok")) {
-                    onInit--;
-                    shards.add((String) request.getData());
-                    Collections.sort(shards);
-                    if (onInit == 0 && addNewShard) {
-                        addNewShard = false;
-                        continueAddShard(); //@FIXME похоже невозможно выполнить запросы, пока не послан ответ на данный запрос
+                int shardID = Integer.valueOf(request.getParams().get("Shard").get(0));
+//                Logger.getLogger("").warning("система не инициализировалась. " + request.getData());
+                for (Shard s : shards) {
+                    if (s.getId() == shardID) {
+                        s.innerMessagesPerform(request);
                     }
-                } else if (request.getParams().get("Innermessage").get(0).equals("isActual")) {
-                    String shard = request.getParams().get("Address").get(0);
-                    if (shards.contains(shard)) {
-                        return new Response(Response.Code.OK, null);
-                    } else {
-                        return new Response(Response.Code.NOT_FOUND, null);
-                    }
-                } else {
-                    Logger.getLogger("").warning("система не инициализировалась. " + request.getData());
                 }
                 return new Response(Response.Code.OK, null);
             } else if (request.getParams().containsKey("Command")) {
                 String command = request.getParams().get("Command").get(0);
                 if (command.equals("add_shard")) {
-                    return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". Ф-ия безбожно глючит, поэтому временно ограничена");
+                    if (true) {
+                        return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". Ф-ия безбожно глючит, поэтому временно ограничена");
+                    }
                     try {
                         addNewShard = true;
                         addShard();
-                        return new Response(Response.Code.OK, null);
                     } catch (Exception e) {
-                        return new Response(Response.Code.BAD_REQUEST, SerializationStuff.getStringFromException(e));
+                        e.printStackTrace();
                     }
+                    return new Response(Response.Code.OK, null);
                 } else if (command.equals("remove_shard")) {
                     return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". Ф-ия пока не реализована");
                 } else {
@@ -172,8 +192,9 @@ public class Router {
                     return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + Router.this.node.getServerName() + ". добавление пачками пока не работает");
                 } else {
                     long id = Long.valueOf(ids.get(0));
-                    String addr = getHasedAddress(id);
-                    return HttpClient.sendRequest(addr, request);
+                    Shard shard = getHasedAddress(id);
+                    return shard.performRequest(request);
+//                    return HttpClient.sendRequest(addr, request);
                 }
             } else {
                 return new Response(Response.Code.FORBIDDEN, "Это " + Router.this.node.getServerName() + ". запрос непоятен. попробуйте добавить Id в header");

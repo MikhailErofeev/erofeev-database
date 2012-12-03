@@ -1,14 +1,21 @@
 package ru.compscicenter.db.erofeev;
 
-import ru.compscicenter.db.erofeev.common.AbstractCron;
 import ru.compscicenter.db.erofeev.common.Launcher;
-import ru.compscicenter.db.erofeev.common.Node;
-import ru.compscicenter.db.erofeev.communication.*;
+import ru.compscicenter.db.erofeev.common.Stuff;
+import ru.compscicenter.db.erofeev.communication.Entity;
+import ru.compscicenter.db.erofeev.communication.HttpClient;
+import ru.compscicenter.db.erofeev.communication.Request;
+import ru.compscicenter.db.erofeev.communication.Response;
 import ru.compscicenter.db.erofeev.database.DBServer;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -20,132 +27,167 @@ import java.util.logging.Logger;
 public class Shard {
 
     private static final int ACTUAL_CHECK_FREQ = 100 * 1000;
-    private String slaverAddress;
     private String masterAddress;
     private String dbname;
-    private int shardIndex;
+    private int id;
     private int slaves;
-    private Node node;
-    private final String routerAddress;
+    private Router router;
+    private ExecutorService exec = Executors.newCachedThreadPool();
 
-    class ActualCron extends AbstractCron {
+    private Queue<Slave> slaveQueue; //читаем по очереди
+    private List<Slave> slaveList; //пишем во все сразу
 
-        protected ActualCron(long ms) {
-            super(ms);
-        }
 
-        @Override
-        protected void action() {
-            Request request = new Request(Request.RequestType.GET, null);
-            request.addParam("Innermessage", "isActual");
-            request.addParam("Address", node.getAddress());
-            Response response = HttpClient.sendRequest(routerAddress, request);
-            if (response == null || response.getCode() != Response.Code.OK) {
-                Request exitRequest = new Request(Request.RequestType.GET, null);
-                exitRequest.addParam("Innermessage", "exit");
-                exitRequest.addParam("In", "ok");
-                exit(exitRequest);
-            }
+    class Slave {
+        public final String addr;
+        public int actives;
 
+        public Slave(String addr) {
+            this.addr = addr;
+            actives = 0;
         }
     }
 
-
-    private void initSlaver() throws IOException {
-        Launcher.startServer(Slaver.class, new String[]{dbname, String.valueOf(shardIndex), String.valueOf(slaves), node.getAddress()});
-    }
 
     private void initMaster() throws IOException {
-        Launcher.startServer(DBServer.class, new String[]{dbname, String.valueOf(shardIndex), String.valueOf(0), slaverAddress, node.getAddress()});
+        Launcher.startServer(DBServer.class,
+                new String[]{router.getDbname(), String.valueOf(id),
+                        router.getNode().getAddress(), String.valueOf(true)});
     }
 
-    public Shard(String dbname, int shardIndex, String routerAddress, int slaves) {
-        this.slaves = slaves;
-        this.dbname = dbname;
-        this.shardIndex = shardIndex;
-        this.routerAddress = routerAddress;
+    private void initSlave() throws IOException {
+        Launcher.startServer(DBServer.class,
+                new String[]{router.getDbname(), String.valueOf(id),
+                        router.getNode().getAddress(), String.valueOf(false)});
+    }
+
+    public Shard(Router router, int shardIndex) {
+        this.router = router;
+        this.id = shardIndex;
+        slaveList = new LinkedList<>();
+        slaveQueue = new LinkedBlockingQueue<>();
+        activateSlaves();
         try {
-            node = new Node(dbname, this.getClass().getSimpleName() + shardIndex, new ShardHandler(), routerAddress);
-            node.getHttpServer().start();
-            initSlaver();
-            Thread.sleep(2000 * (slaves + 3));
-            node.sendActivateResult(false, "time out at " + node.getServerName());
-        } catch (Exception e) {
-            String ex = SerializationStuff.getStringFromException(e);
-            Node.sendActivateResult(false, ex, this.getClass().getSimpleName(), routerAddress);
+            initMaster();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
+        System.out.println(shardIndex + " init");
     }
 
-    public static void main(String[] args) {
-        if (args.length < 4) {
-            return;
-        } else {
-            new Shard(args[0], Integer.valueOf(args[1]), args[2], Integer.valueOf(args[3]));
-        }
-    }
-
-    private void exit(Request request) {
-        HttpClient.sendRequest(slaverAddress, request);
-        HttpClient.sendRequest(masterAddress, request);
-        node.getHttpServer().stop(23);
-        Logger.getLogger("").info("exit");
-        System.exit(23);
-    }
-
-    class ShardHandler extends AbstractHandler {
-
-        void innerMessagesPerform(Request request) {
-            String message = request.getParams().get("Innermessage").get(0);
-            if ("activate_ok".equals(message)) {
-                String server = request.getParams().get("Server").get(0);
-                String data = (String) request.getData();
-                if (server == null) {
-                    String ex = SerializationStuff.getStringFromException(new NullPointerException("server == null"));
-                    node.sendActivateResult(false, ex);
-                } else if (data == null) {
-                    String ex = SerializationStuff.getStringFromException(new NullPointerException("data == null"));
-                    node.sendActivateResult(false, ex);
-                } else if (server.startsWith("Slaver")) {
-                    slaverAddress = data;
-                    try {
-                        initMaster();
-                    } catch (Exception e) {
-                        node.sendActivateResult(false, SerializationStuff.getStringFromException(e));
-                    }
-                } else if (server.startsWith("Master")) {
-                    masterAddress = data;
-                    node.sendTrueActiveateResult();
-                    ExecutorService exec = Executors.newCachedThreadPool();
-                    exec.execute(new ActualCron(ACTUAL_CHECK_FREQ));
-                }
-            } else if ("activate_fail".equals(message)) {
-                node.sendActivateResult(false, request.getData());
-            } else if ("exit".equals(message)) {
-                exit(request);
+    private void activateSlaves() {
+        try {
+            for (int i = 1; i <= router.getSlavesPerShard(); i++) {
+                initSlave();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    void innerMessagesPerform(Request request) {
+        String message = request.getParams().get("Innermessage").get(0);
+        String data = (String) request.getData();
+        if (data == null) {
+            throw new NullPointerException("data == null");
+        }
+        if ("added_slave".equals(message)) {
+            Slave s = new Slave(data);
+            slaveList.add(s);
+            slaveQueue.add(s);
+            Logger.getLogger("").log(Level.INFO, "add slave " + s.addr);
+            if (slaveList.size() == router.getSlavesPerShard()) {
+                System.out.println("all slaves ok");
+            }
+        } else if ("added_master".equals(message)) {
+            masterAddress = data;
+        } else if (("fail").equals(message)) {
+            System.err.println(data);
+        } else {
+            System.err.println("непоятное внутреннее сообщение: " + message);
+        }
+    }
+
+    public Response performRequest(Request request) {
+        if (request.getParams().containsKey("Id")) {
+            if (request.getType() == Request.RequestType.GET) {
+                return getter(request);
+            } else if (request.getType() == Request.RequestType.PUT) {
+                return putter(request);
+            } else if (request.getType() == Request.RequestType.DELETE) {
+                return deleter(request);
+            } else {
+                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + router.getNode().getServerName() + ". метод не доступен");
+            }
+        } else {
+            return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + router.getNode().getServerName() + ". ID не указан");
+        }
+    }
+
+    private Response putter(Request request) {
+        long id = Stuff.longsFromStrings(request.getParams().get("Id")).get(0);
+        router.getCache().put(id, new Entity(id, request.getData()));
+        asyncRequestToSlaves(request);
+        return new Response(Response.Code.OK, null);
+    }
+
+    private Response deleter(Request request) {
+        long id = Stuff.longsFromStrings(request.getParams().get("Id")).get(0);
+        if (id != -1) {
+            router.getCache().remove(id);
+        }
+        asyncRequestToSlaves(request);
+        return new Response(Response.Code.OK, null);
+    }
+
+    private synchronized Slave getNextSlave() {
+        Slave s = slaveQueue.poll();
+        slaveQueue.offer(s);
+        return s;
+    }
+
+    private void asyncRequestToSlaves(Request request) {
+        for (Slave s : slaveList) {
+            exec.execute(new RequestExecutor(s.addr, request));
+        }
+    }
+
+
+    private Response readFromSlave(Request request) {
+        Slave s = getNextSlave();
+        return HttpClient.sendRequest(s.addr, request);
+    }
+
+
+    private Response getter(Request request) {
+        long id = Stuff.longsFromStrings(request.getParams().get("Id")).get(0);
+        Entity e = router.getCache().get(id);
+        if (e == null) {
+            Response response = readFromSlave(request);
+            if (response.getCode() == Response.Code.OK) {
+                e = new Entity(id, response.getData());
+                router.getCache().put(id, e);
+            }
+            return response;
+        } else {
+            return new Response(Response.Code.OK, e.getData());
+        }
+    }
+
+
+    private class RequestExecutor extends HttpClient.AsyncHttpClient {
+
+        private RequestExecutor(String addr, Request request) {
+            super(addr, request);
         }
 
         @Override
-        public Response performRequest(Request request) {
-            if (request.getParams().containsKey("Innermessage")) {
-                innerMessagesPerform(request);
-                return new Response(Response.Code.OK, null);
-            } else if (!request.getParams().containsKey("In")) {
-                return new Response(Response.Code.METHOD_NOT_ALLOWED, "Это " + node.getServerName() + ". доступ только для своих");
-            } else if (request.getParams().containsKey("Id")) {
-                if (request.getType() == Request.RequestType.GET) {
-                    if (request.getParams().containsKey("Aliquant")) {
-                        return HttpClient.sendRequest(masterAddress, request);
-                    } else {
-                        return HttpClient.sendRequest(slaverAddress, request);
-                    }
-                } else {
-                    return HttpClient.sendRequest(masterAddress, request);
-                }
-            } else {
-                return new Response(Response.Code.FORBIDDEN, "Это " + node.getServerName() + ". запрос непоятен. роутер, ты чего творишь?");
-            }
+        public void performResponse(Response response) {
+            //@TODO что если что-то пошло не так?
         }
     }
 }

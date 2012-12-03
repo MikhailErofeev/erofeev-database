@@ -1,4 +1,4 @@
-package ru.compscicenter.db.erofeev.database;
+package ru.compscicenter.db.erofeev.communication;
 
 import java.io.Serializable;
 
@@ -36,5 +36,21 @@ public final class Entity implements Serializable {
 
     public void setKey(long key) {
         this.key = key;
+    }
+
+    public boolean isNeedFlush() {
+        return needFlush;
+    }
+
+    public void setNeedFlush(boolean needFlush) {
+        this.needFlush = needFlush;
+    }
+
+    public long getLastActive() {
+        return lastActive;
+    }
+
+    public void setLastActive(long lastActive) {
+        this.lastActive = lastActive;
     }
 }
