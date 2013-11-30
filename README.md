@@ -1,6 +1,8 @@
 erofeev-database
 ================
 
+NB: это очень плохая "студенческая" архитектура
+
 java, db, nosql, distributed
 
 Архитектура:
